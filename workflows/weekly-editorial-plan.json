@@ -1,0 +1,70 @@
+{
+  "name": "AIR3 - Piano editoriale settimanale (nessuna pubblicazione)",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Rome"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "weeksInterval": 1,
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "weekly",
+      "name": "Lunedi mattina",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SMM_BASE_URL + '/api/brands/' + $vars.SMM_BRAND_ID + '/plan' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 120000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"objective\": \"Proponi un piano editoriale per la prossima settimana usando campagne attive, fonti approvate e performance disponibili.\"}"
+      },
+      "id": "proponi-piano",
+      "name": "Proponi piano",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        280,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Lunedi mattina": {
+      "main": [
+        [
+          {
+            "node": "Proponi piano",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {}
+}

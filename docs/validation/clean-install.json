@@ -1,0 +1,10 @@
+{
+  "mode": "Clean extracted-layout smoke, real HTTP and persistent SQLite; no LLM/social calls",
+  "npm_start_without_node_modules": "PASS",
+  "healthz": "PASS",
+  "login_and_persist_brand": "PASS",
+  "static_dashboard": "PASS",
+  "doctor_real_ffmpeg": "PASS",
+  "sqlite_consistent_backup": "PASS",
+  "backup_integrity_and_brand": "PASS"
+}

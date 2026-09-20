@@ -1,0 +1,396 @@
+
+> air3-social-studio@0.1.0 test
+> npm run build && node --test dist/tests/*.test.js
+
+
+> air3-social-studio@0.1.0 build
+> tsc -p tsconfig.json
+
+TAP version 13
+# (node:2594) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: AES-GCM binds ciphertext to workspace, brand and account
+ok 1 - AES-GCM binds ciphertext to workspace, brand and account
+  ---
+  duration_ms: 5.695873
+  type: 'test'
+  ...
+# Subtest: scrypt validates only the correct password
+ok 2 - scrypt validates only the correct password
+  ---
+  duration_ms: 309.533657
+  type: 'test'
+  ...
+# Subtest: reused GoonersBot similarity primitives handle edge cases
+ok 3 - reused GoonersBot similarity primitives handle edge cases
+  ---
+  duration_ms: 2.880355
+  type: 'test'
+  ...
+# Subtest: chunker bounds, overlap and newline splitting
+ok 4 - chunker bounds, overlap and newline splitting
+  ---
+  duration_ms: 0.800919
+  type: 'test'
+  ...
+# Subtest: strict model schemas reject extra properties, wrong types and unbounded scores
+ok 5 - strict model schemas reject extra properties, wrong types and unbounded scores
+  ---
+  duration_ms: 1.053773
+  type: 'test'
+  ...
+# Subtest: platform catalog covers requested channels and refuses silent media loss
+ok 6 - platform catalog covers requested channels and refuses silent media loss
+  ---
+  duration_ms: 0.917991
+  type: 'test'
+  ...
+# Subtest: account ciphertext never appears in public representation; scoped decrypt works
+ok 7 - account ciphertext never appears in public representation; scoped decrypt works
+  ---
+  duration_ms: 117.681287
+  type: 'test'
+  ...
+# Subtest: brand-scoped entities cannot be accessed through another brand or workspace
+ok 8 - brand-scoped entities cannot be accessed through another brand or workspace
+  ---
+  duration_ms: 76.591032
+  type: 'test'
+  ...
+# Subtest: optimistic content revisions reject stale edits
+ok 9 - optimistic content revisions reject stale edits
+  ---
+  duration_ms: 62.956906
+  type: 'test'
+  ...
+# Subtest: machine tokens cannot approve, grant their own approval, or create admin tokens
+ok 10 - machine tokens cannot approve, grant their own approval, or create admin tokens
+  ---
+  duration_ms: 59.622784
+  type: 'test'
+  ...
+# Subtest: mandatory brand rules cannot be overridden by a high reviewer score
+ok 11 - mandatory brand rules cannot be overridden by a high reviewer score
+  ---
+  duration_ms: 66.616263
+  type: 'test'
+  ...
+# Subtest: editing approved content invalidates approval and changing brand invalidates signature
+ok 12 - editing approved content invalidates approval and changing brand invalidates signature
+  ---
+  duration_ms: 73.844937
+  type: 'test'
+  ...
+# Subtest: scheduling is durable and cancellation removes queued publication
+ok 13 - scheduling is durable and cancellation removes queued publication
+  ---
+  duration_ms: 62.549222
+  type: 'test'
+  ...
+# Subtest: one worker publish yields one provider call and schedules 24h/72h observations
+ok 14 - one worker publish yields one provider call and schedules 24h/72h observations
+  ---
+  duration_ms: 104.221365
+  type: 'test'
+  ...
+# Subtest: ambiguous provider failure is UNCERTAIN and is never blindly retried
+ok 15 - ambiguous provider failure is UNCERTAIN and is never blindly retried
+  ---
+  duration_ms: 81.087511
+  type: 'test'
+  ...
+# Subtest: a definite 429 is queued with backoff, not marked as successfully published
+ok 16 - a definite 429 is queued with backoff, not marked as successfully published
+  ---
+  duration_ms: 87.588467
+  type: 'test'
+  ...
+# Subtest: expired write leases require reconciliation, read leases are safe to reclaim
+ok 17 - expired write leases require reconciliation, read leases are safe to reclaim
+  ---
+  duration_ms: 62.493594
+  type: 'test'
+  ...
+# Subtest: RAG filters approval, scope, role, platform and expiry; repeated input is deduplicated
+ok 18 - RAG filters approval, scope, role, platform and expiry; repeated input is deduplicated
+  ---
+  duration_ms: 61.578824
+  type: 'test'
+  ...
+# Subtest: knowledge changes invalidate an existing publication approval
+ok 19 - knowledge changes invalidate an existing publication approval
+  ---
+  duration_ms: 59.924659
+  type: 'test'
+  ...
+# Subtest: MCP negotiates protocol, enforces tool schemas and never exposes an approve tool
+ok 20 - MCP negotiates protocol, enforces tool schemas and never exposes an approve tool
+  ---
+  duration_ms: 64.082058
+  type: 'test'
+  ...
+# Subtest: fixture AI pipeline records role-specific calls and stops at human approval
+ok 21 - fixture AI pipeline records role-specific calls and stops at human approval
+  ---
+  duration_ms: 65.452771
+  type: 'test'
+  ...
+# Subtest: analyst uses real snapshot IDs and separate latest observation per post
+ok 22 - analyst uses real snapshot IDs and separate latest observation per post
+  ---
+  duration_ms: 78.22913
+  type: 'test'
+  ...
+# (node:2595) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: Real HTTP session lifecycle, CSRF, tenant-scoped machine token and revocation
+ok 23 - Real HTTP session lifecycle, CSRF, tenant-scoped machine token and revocation
+  ---
+  duration_ms: 427.796181
+  type: 'test'
+  ...
+# Subtest: Last admin cannot self-demote; passwords are never returned from member list
+ok 24 - Last admin cannot self-demote; passwords are never returned from member list
+  ---
+  duration_ms: 109.383718
+  type: 'test'
+  ...
+# Subtest: WhatsApp webhook signature, target binding, replay deduplication and verified 24h window
+ok 25 - WhatsApp webhook signature, target binding, replay deduplication and verified 24h window
+  ---
+  duration_ms: 60.567776
+  type: 'test'
+  ...
+# Subtest: WhatsApp delivery webhook resolves accepted message exactly once and cannot downgrade read
+ok 26 - WhatsApp delivery webhook resolves accepted message exactly once and cannot downgrade read
+  ---
+  duration_ms: 58.846492
+  type: 'test'
+  ...
+# Subtest: Telegram callback approval requires signed webhook, exact chat and current human membership
+ok 27 - Telegram callback approval requires signed webhook, exact chat and current human membership
+  ---
+  duration_ms: 65.074477
+  type: 'test'
+  ...
+# Subtest: Embeddings validate index correspondence, model namespace, dimensions and lexical fallback
+ok 28 - Embeddings validate index correspondence, model namespace, dimensions and lexical fallback
+  ---
+  duration_ms: 58.446207
+  type: 'test'
+  ...
+# Subtest: Network blocks arbitrary URLs and credentials in URLs before fetch
+ok 29 - Network blocks arbitrary URLs and credentials in URLs before fetch
+  ---
+  duration_ms: 0.97956
+  type: 'test'
+  ...
+# Subtest: Campaign edits invalidate approval; plan conversion is atomic on invalid account
+ok 30 - Campaign edits invalidate approval; plan conversion is atomic on invalid account
+  ---
+  duration_ms: 94.862002
+  type: 'test'
+  ...
+# Subtest: Real FFmpeg JPEG rendering, signed media access, scoped assets and MP4 slideshow
+ok 31 - Real FFmpeg JPEG rendering, signed media access, scoped assets and MP4 slideshow
+  ---
+  duration_ms: 1555.964222
+  type: 'test'
+  ...
+# Subtest: Template fits text vertically or rejects overflow instead of overlapping title and body
+ok 32 - Template fits text vertically or rejects overflow instead of overlapping title and body
+  ---
+  duration_ms: 7.559856
+  type: 'test'
+  ...
+# (node:2596) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: HTTP contract, not live: telegram text publishing
+ok 33 - HTTP contract, not live: telegram text publishing
+  ---
+  duration_ms: 244.603143
+  type: 'test'
+  ...
+# Subtest: HTTP contract, not live: facebook text publishing
+ok 34 - HTTP contract, not live: facebook text publishing
+  ---
+  duration_ms: 122.107654
+  type: 'test'
+  ...
+# Subtest: HTTP contract, not live: x text publishing
+ok 35 - HTTP contract, not live: x text publishing
+  ---
+  duration_ms: 63.235184
+  type: 'test'
+  ...
+# Subtest: HTTP contract, not live: linkedin text publishing
+ok 36 - HTTP contract, not live: linkedin text publishing
+  ---
+  duration_ms: 66.744052
+  type: 'test'
+  ...
+# Subtest: HTTP contract, not live: linkedin-page text publishing
+ok 37 - HTTP contract, not live: linkedin-page text publishing
+  ---
+  duration_ms: 60.350752
+  type: 'test'
+  ...
+# Subtest: HTTP contract, not live: discord text publishing
+ok 38 - HTTP contract, not live: discord text publishing
+  ---
+  duration_ms: 60.044112
+  type: 'test'
+  ...
+# Subtest: HTTP contract, not live: slack text publishing
+ok 39 - HTTP contract, not live: slack text publishing
+  ---
+  duration_ms: 57.311045
+  type: 'test'
+  ...
+# Subtest: HTTP contract, not live: reddit text publishing
+ok 40 - HTTP contract, not live: reddit text publishing
+  ---
+  duration_ms: 55.627454
+  type: 'test'
+  ...
+# Subtest: HTTP contract, not live: mastodon text publishing
+ok 41 - HTTP contract, not live: mastodon text publishing
+  ---
+  duration_ms: 59.022597
+  type: 'test'
+  ...
+# Subtest: HTTP contract, not live: bluesky text publishing
+ok 42 - HTTP contract, not live: bluesky text publishing
+  ---
+  duration_ms: 58.554595
+  type: 'test'
+  ...
+# Subtest: HTTP contract, not live: farcaster text publishing
+ok 43 - HTTP contract, not live: farcaster text publishing
+  ---
+  duration_ms: 77.098547
+  type: 'test'
+  ...
+# Subtest: HTTP contract, not live: twitch text publishing
+ok 44 - HTTP contract, not live: twitch text publishing
+  ---
+  duration_ms: 71.148138
+  type: 'test'
+  ...
+# Subtest: Telegram album sends exactly one caption and preserves all returned IDs
+ok 45 - Telegram album sends exactly one caption and preserves all returned IDs
+  ---
+  duration_ms: 56.161794
+  type: 'test'
+  ...
+# Subtest: Pinterest native image and board contract
+ok 46 - Pinterest native image and board contract
+  ---
+  duration_ms: 62.440643
+  type: 'test'
+  ...
+# Subtest: instagram: container creation, pure GET readiness, separate final publication
+ok 47 - instagram: container creation, pure GET readiness, separate final publication
+  ---
+  duration_ms: 59.565402
+  type: 'test'
+  ...
+# Subtest: threads: container creation, pure GET readiness, separate final publication
+ok 48 - threads: container creation, pure GET readiness, separate final publication
+  ---
+  duration_ms: 65.669489
+  type: 'test'
+  ...
+# Subtest: Instagram carousel children are image containers, final parent carries caption
+ok 49 - Instagram carousel children are image containers, final parent carries caption
+  ---
+  duration_ms: 67.61371
+  type: 'test'
+  ...
+# Subtest: Facebook video remains PROCESSING until video_status ready
+ok 50 - Facebook video remains PROCESSING until video_status ready
+  ---
+  duration_ms: 60.152998
+  type: 'test'
+  ...
+# Subtest: messenger: reply routes recipient without inventing delivery receipt
+ok 51 - messenger: reply routes recipient without inventing delivery receipt
+  ---
+  duration_ms: 121.275502
+  type: 'test'
+  ...
+# Subtest: instagram-dm: reply routes recipient without inventing delivery receipt
+ok 52 - instagram-dm: reply routes recipient without inventing delivery receipt
+  ---
+  duration_ms: 69.983205
+  type: 'test'
+  ...
+# Subtest: WhatsApp template accepted receipt is PROCESSING, never delivery success
+ok 53 - WhatsApp template accepted receipt is PROCESSING, never delivery success
+  ---
+  duration_ms: 63.141136
+  type: 'test'
+  ...
+# Subtest: TikTok video creator permissions -> init ticket -> authoritative status
+ok 54 - TikTok video creator permissions -> init ticket -> authoritative status
+  ---
+  duration_ms: 60.311597
+  type: 'test'
+  ...
+# Subtest: TikTok unaudited public post is refused before publish init
+ok 55 - TikTok unaudited public post is refused before publish init
+  ---
+  duration_ms: 58.45923
+  type: 'test'
+  ...
+# Subtest: TikTok photo DIRECT_POST contract, explicit privacy and commercial flags
+ok 56 - TikTok photo DIRECT_POST contract, explicit privacy and commercial flags
+  ---
+  duration_ms: 60.270757
+  type: 'test'
+  ...
+# Subtest: Postiz youtube: upload, provider contract and monitored publication
+ok 57 - Postiz youtube: upload, provider contract and monitored publication
+  ---
+  duration_ms: 64.368889
+  type: 'test'
+  ...
+# Subtest: Postiz linkedin: upload, provider contract and monitored publication
+ok 58 - Postiz linkedin: upload, provider contract and monitored publication
+  ---
+  duration_ms: 61.014186
+  type: 'test'
+  ...
+# Subtest: Postiz x: upload, provider contract and monitored publication
+ok 59 - Postiz x: upload, provider contract and monitored publication
+  ---
+  duration_ms: 61.904363
+  type: 'test'
+  ...
+# Subtest: Postiz analytics uses latest snapshot, not a false sum of cumulative totals
+ok 60 - Postiz analytics uses latest snapshot, not a false sum of cumulative totals
+  ---
+  duration_ms: 74.650397
+  type: 'test'
+  ...
+# Subtest: Unsupported native metrics do not return invented zero values
+ok 61 - Unsupported native metrics do not return invented zero values
+  ---
+  duration_ms: 64.742837
+  type: 'test'
+  ...
+# Subtest: Disabled integrations and unsupported format fail before the first external call
+ok 62 - Disabled integrations and unsupported format fail before the first external call
+  ---
+  duration_ms: 73.799395
+  type: 'test'
+  ...
+1..62
+# tests 62
+# suites 0
+# pass 62
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2855.223206

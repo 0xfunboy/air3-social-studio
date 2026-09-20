@@ -1,0 +1,18 @@
+{
+  "mode": "Browser component/visual tests with in-memory API fixtures; NO live HTTP browser navigation",
+  "pages": [
+    "contents",
+    "calendar",
+    "knowledge",
+    "accounts",
+    "assets",
+    "campaigns",
+    "inbox",
+    "analytics",
+    "jobs",
+    "settings"
+  ],
+  "token_dialog": "PASS",
+  "errors": [],
+  "mobile_horizontal_overflow": false
+}

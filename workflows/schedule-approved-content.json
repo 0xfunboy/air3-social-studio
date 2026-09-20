@@ -1,0 +1,111 @@
+{
+  "name": "AIR3 - Programma una versione gia approvata",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Rome"
+  },
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual",
+      "name": "Avvio manuale",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.SMM_BASE_URL + '/api/contents/' + $vars.SMM_CONTENT_ID }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "leggi-versione",
+      "name": "Leggi versione",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        250,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const c = $input.first().json;\nif (c.data?.status !== 'APPROVED') throw new Error('Il contenuto non e approvato. Nessuna programmazione.');\nreturn [{json: {contentId: c.id, revision: c.revision}}];"
+      },
+      "id": "gate",
+      "name": "Richiedi APPROVED",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SMM_BASE_URL + '/api/contents/' + $json.contentId + '/schedule' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 120000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({revision: $json.revision, at: $vars.SMM_SCHEDULE_AT}) }}"
+      },
+      "id": "programma-in-studio",
+      "name": "Programma in Studio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        750,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Avvio manuale": {
+      "main": [
+        [
+          {
+            "node": "Leggi versione",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leggi versione": {
+      "main": [
+        [
+          {
+            "node": "Richiedi APPROVED",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Richiedi APPROVED": {
+      "main": [
+        [
+          {
+            "node": "Programma in Studio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {}
+}

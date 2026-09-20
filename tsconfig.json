@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "target": "ES2023", "module": "NodeNext", "moduleResolution": "NodeNext",
+    "lib": ["ES2023", "DOM"], "types": ["node"], "strict": true,
+    "noUncheckedIndexedAccess": true, "skipLibCheck": true,
+    "rootDir": ".", "outDir": "dist", "sourceMap": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts", "main.ts", "cli.ts"]
+}

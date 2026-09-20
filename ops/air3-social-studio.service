@@ -1,0 +1,24 @@
+[Unit]
+Description=AIR3 Social Studio
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=air3-studio
+Group=air3-studio
+WorkingDirectory=/opt/air3-social-studio
+EnvironmentFile=/opt/air3-social-studio/.env
+ExecStart=/usr/bin/node dist/main.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=180
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/air3-social-studio/data
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

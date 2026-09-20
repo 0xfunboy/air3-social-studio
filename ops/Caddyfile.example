@@ -1,0 +1,7 @@
+# Put the real public hostname in SMM_HOSTNAME and use the same origin in BASE_URL.
+{$SMM_HOSTNAME} {
+    request_body {
+        max_size 130MB
+    }
+    reverse_proxy 127.0.0.1:3100
+}

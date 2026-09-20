@@ -1,0 +1,28 @@
+{
+  "name": "air3-social-studio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Multi-brand social editorial studio with grounded AI, human approval and official-API publishing",
+  "type": "module",
+  "engines": {
+    "node": ">=22.16.0"
+  },
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "start": "node --env-file-if-exists=.env dist/main.js",
+    "dev": "npm run build && npm start",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test dist/tests/*.test.js",
+    "doctor": "node --env-file-if-exists=.env dist/cli.js doctor",
+    "backup": "node --env-file-if-exists=.env dist/cli.js backup",
+    "format": "node scripts/format.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "25.1.0",
+    "typescript": "5.8.3"
+  },
+  "overrides": {
+    "undici-types": "7.16.0"
+  }
+}
