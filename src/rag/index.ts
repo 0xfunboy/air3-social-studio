@@ -5,39 +5,61 @@ import type { Store } from '../core/store.js';
 import type { Principal, Knowledge, Retrieved } from '../core/types.js';
 import { assert, text, strings, id, sha } from '../core/util.js';
 import { cosineSimilarity, tokens } from './similarity.js';
-export function chunkText(input: string, size = 1000, overlap = 120): string[] { assert(size > overlap && overlap >= 0, 'CHUNK', 'Dimensioni chunk non valide'); const normalized = input.replace(/\r\n/g, '\n').trim(); const result: string[] = []; let start = 0; while (start < normalized.length) {
-    let end = Math.min(start + size, normalized.length);
-    if (end < normalized.length) {
-        const split = normalized.lastIndexOf('\n', end);
-        if (split > start + size / 2)
-            end = split;
+export function chunkText(input: string, size = 1000, overlap = 120): string[] {
+    assert(size > overlap && overlap >= 0, 'CHUNK', 'Dimensioni chunk non valide');
+    const normalized = input.replace(/\r\n/g, '\n').trim();
+    const result: string[] = [];
+    let start = 0;
+    while (start < normalized.length) {
+        let end = Math.min(start + size, normalized.length);
+        if (end < normalized.length) {
+            const split = normalized.lastIndexOf('\n', end);
+            if (split > start + size / 2)
+                end = split;
+        }
+        const s = normalized.slice(start, end).trim();
+        if (s)
+            result.push(s);
+        if (end === normalized.length)
+            break;
+        start = end - overlap;
     }
-    const s = normalized.slice(start, end).trim();
-    if (s)
-        result.push(s);
-    if (end === normalized.length)
-        break;
-    start = end - overlap;
-} return result; }
+    return result;
+}
 export class Embedder {
     private cache = new Map<string, number[]>();
     constructor(private cfg: Config, private http: Http) { }
     get enabled(): boolean { return !!(this.cfg.embeddingBase && this.cfg.embeddingModel); }
     get model(): string { return this.cfg.embeddingBase + '#' + this.cfg.embeddingModel; }
-    async embed(texts: string[]): Promise<number[][]> { if (!this.enabled)
-        return []; const r = await this.http.request(this.cfg.embeddingBase + '/embeddings', jsonRequest({ model: this.cfg.embeddingModel, input: texts }, this.cfg.embeddingKey)); assert(Array.isArray(r.body.data) && r.body.data.length === texts.length, 'EMBEDDINGS', 'Risposta embeddings incompleta'); const sorted = [...r.body.data].sort((a, b) => a.index - b.index); assert(sorted.every((d: any, i: number) => d.index === i), 'EMBEDDINGS', 'Indici embeddings mancanti o duplicati'); const vectors = sorted.map((d: any) => d.embedding); assert(vectors.every((v: any) => Array.isArray(v) && v.length > 0 && v.length <= 65536 && v.every((x: any) => typeof x === 'number' && Number.isFinite(x))) && vectors.every((v: any) => v.length === vectors[0].length), 'EMBEDDINGS', 'Vettori non validi o dimensioni incoerenti'); return vectors; }
-    async query(input: string): Promise<number[]> { if (!this.enabled)
-        return []; const key = sha(input); const found = this.cache.get(key); if (found)
-        return found; try {
-        const v = (await this.embed([input]))[0] ?? [];
-        if (this.cache.size >= 200)
-            this.cache.delete(this.cache.keys().next().value!);
-        this.cache.set(key, v);
-        return v;
+    async embed(texts: string[]): Promise<number[][]> {
+        if (!this.enabled)
+            return [];
+        const r = await this.http.request(this.cfg.embeddingBase + '/embeddings', jsonRequest({ model: this.cfg.embeddingModel, input: texts }, this.cfg.embeddingKey));
+        assert(Array.isArray(r.body.data) && r.body.data.length === texts.length, 'EMBEDDINGS', 'Risposta embeddings incompleta');
+        const sorted = [...r.body.data].sort((a, b) => a.index - b.index);
+        assert(sorted.every((d: any, i: number) => d.index === i), 'EMBEDDINGS', 'Indici embeddings mancanti o duplicati');
+        const vectors = sorted.map((d: any) => d.embedding);
+        assert(vectors.every((v: any) => Array.isArray(v) && v.length > 0 && v.length <= 65536 && v.every((x: any) => typeof x === 'number' && Number.isFinite(x))) && vectors.every((v: any) => v.length === vectors[0].length), 'EMBEDDINGS', 'Vettori non validi o dimensioni incoerenti');
+        return vectors;
     }
-    catch {
-        return [];
-    } }
+    async query(input: string): Promise<number[]> {
+        if (!this.enabled)
+            return [];
+        const key = sha(this.model + "\0" + input);
+        const found = this.cache.get(key);
+        if (found)
+            return found;
+        try {
+            const v = (await this.embed([input]))[0] ?? [];
+            if (this.cache.size >= 200)
+                this.cache.delete(this.cache.keys().next().value!);
+            this.cache.set(key, v);
+            return v;
+        }
+        catch {
+            return [];
+        }
+    }
 }
 /** GoonersBot knowledgeRetriever pattern, adapted to mandatory tenant/brand scope,
  * versioned embedding space, per-role retrieval and normalized hybrid scoring. */

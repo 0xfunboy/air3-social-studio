@@ -1,3 +1,5 @@
+import { clientIp } from '../core/proxy.js';
+import { ExperienceApi } from './experience.js';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
@@ -31,7 +33,7 @@ function jsonBody(raw) {
 }
 function safeKnowledge(e) { const { chunks, ...data } = e.data; return { ...e, data: { ...data, chunkCount: chunks.length } }; }
 export function createApp(studio, auth, webRoot = resolve('web')) {
-    const mcp = new McpServer(studio), webhooks = new Webhooks(studio);
+    const mcp = new McpServer(studio), webhooks = new Webhooks(studio), experience = new ExperienceApi(studio, auth);
     const rate = new Map();
     const server = createServer(async (req, res) => {
         res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -42,9 +44,38 @@ export function createApp(studio, auth, webRoot = resolve('web')) {
             res.setHeader('Strict-Transport-Security', 'max-age=31536000');
         try {
             const method = req.method ?? 'GET', u = new URL(req.url ?? '/', studio.cfg.baseUrl), path = u.pathname;
-            if (path === '/healthz' && method === 'GET') {
-                send(res, { ok: true, service: 'air3-social-studio', version: '0.1.0' });
+            if (await experience.callback(req, res, u))
                 return;
+            if (path === '/healthz' && method === 'GET') {
+                send(res, { ok: true, service: 'air3-social-studio', version: '0.2.0' });
+                return;
+            }
+            if (path === '/webhooks/meta-global') {
+                if (method === 'GET') {
+                    res.writeHead(200, { 'Content-Type': 'text/plain' });
+                    res.end(webhooks.metaChallenge('', u.searchParams, true));
+                    return;
+                }
+                if (method === 'POST') {
+                    await webhooks.metaReceive('', req.headers, await readBody(req, 1000000), true);
+                    send(res, { ok: true });
+                    return;
+                }
+                throw new AppError(405, 'METHOD', 'Metodo non consentito');
+            }
+            const metaWebhook = /^\/webhooks\/meta\/([a-f0-9]{32})$/.exec(path);
+            if (metaWebhook) {
+                if (method === 'GET') {
+                    res.writeHead(200, { 'Content-Type': 'text/plain' });
+                    res.end(webhooks.metaChallenge(metaWebhook[1], u.searchParams));
+                    return;
+                }
+                if (method === 'POST') {
+                    await webhooks.metaReceive(metaWebhook[1], req.headers, await readBody(req, 1000000));
+                    send(res, { ok: true });
+                    return;
+                }
+                throw new AppError(405, 'METHOD', 'Metodo non consentito');
             }
             const signed = /^\/media\/([a-f0-9]{32})$/.exec(path);
             if (signed && ['GET', 'HEAD'].includes(method)) {
@@ -88,7 +119,7 @@ export function createApp(studio, auth, webRoot = resolve('web')) {
                 return;
             }
             if (path.startsWith('/api/') || path === '/mcp') {
-                const ip = req.socket.remoteAddress ?? 'local', at = Date.now();
+                const ip = clientIp(req), at = Date.now();
                 for (const [k, v] of rate)
                     if (v.until < at)
                         rate.delete(k);
@@ -98,6 +129,8 @@ export function createApp(studio, auth, webRoot = resolve('web')) {
                 rate.set(ip, r);
                 assert(r.n <= 500, 'RATE_LIMIT', 'Limite richieste al minuto raggiunto', 429);
                 const mutating = !['GET', 'HEAD'].includes(method);
+                if (await experience.public(req, res, u))
+                    return;
                 if (path === '/api/login' && method === 'POST') {
                     assert(!req.headers.origin || req.headers.origin === studio.cfg.baseUrl, 'ORIGIN', 'Origin non consentita', 403);
                     assert(req.headers['content-type']?.startsWith('application/json'), 'CONTENT_TYPE', 'Richiesto application/json', 415);
@@ -107,6 +140,8 @@ export function createApp(studio, auth, webRoot = resolve('web')) {
                     return;
                 }
                 const { principal: p, csrf } = auth.principal(req, mutating);
+                if (await experience.protected(req, res, u, p))
+                    return;
                 const bidMatch = /^\/api\/brands\/([a-f0-9]{32})(?:\/(.*))?$/.exec(path);
                 if (path === '/api/logout' && method === 'POST') {
                     auth.logout(req);
@@ -116,11 +151,11 @@ export function createApp(studio, auth, webRoot = resolve('web')) {
                 }
                 if (path === '/api/me' && method === 'GET') {
                     const user = studio.store.db.prepare('SELECT id,email FROM users WHERE id=?').get(p.userId);
-                    send(res, { principal: p, csrf, user, workspaces: p.via === 'session' ? auth.workspaces(p.userId) : [] });
+                    send(res, { principal: p, csrf, user, siteAdmin: auth.siteAdmin(p.userId), googleLinked: !!studio.store.db.prepare("SELECT user_id FROM identities WHERE provider='google' AND user_id=?").get(p.userId), workspaces: p.via === 'session' ? auth.workspaces(p.userId) : [] });
                     return;
                 }
                 if (path === '/api/status' && method === 'GET') {
-                    send(res, { version: '0.1.0', model: { configured: studio.model.available, name: studio.model.name, provider: studio.cfg.llmProvider }, embeddings: { configured: studio.rag.embedder.enabled, model: studio.rag.embedder.enabled ? studio.rag.embedder.model : null, fallback: 'lexical' }, imageModel: studio.cfg.imageModel || null, workerEnabled: studio.cfg.worker, renderer: await studio.media.health(), baseUrl: studio.cfg.baseUrl, platforms: CAPABILITIES });
+                    send(res, { version: '0.2.0', model: { configured: studio.model.available, name: studio.model.name, provider: studio.cfg.llmProvider }, embeddings: { configured: studio.rag.embedder.enabled, model: studio.rag.embedder.enabled ? studio.rag.embedder.model : null, fallback: 'lexical' }, imageModel: studio.cfg.imageModel || null, workerEnabled: studio.cfg.worker, renderer: await studio.media.health(), baseUrl: studio.cfg.baseUrl, platforms: CAPABILITIES });
                     return;
                 }
                 if (path === '/api/brands' && method === 'GET') {
@@ -432,11 +467,12 @@ export function createApp(studio, auth, webRoot = resolve('web')) {
                 throw new AppError(404, 'NOT_FOUND', 'Endpoint non trovato');
             }
             assert(method === 'GET' || method === 'HEAD', 'METHOD', 'Metodo non consentito', 405);
-            const files = { '/': { file: 'index.html', mime: 'text/html; charset=utf-8' }, '/app.js': { file: 'app.js', mime: 'text/javascript; charset=utf-8' }, '/style.css': { file: 'style.css', mime: 'text/css; charset=utf-8' } };
-            const f = files[path];
-            assert(f, 'NOT_FOUND', 'Pagina non trovata', 404);
-            res.writeHead(200, { 'Content-Type': f.mime, 'Cache-Control': 'no-cache' });
-            res.end(method === 'HEAD' ? '' : await readFile(join(webRoot, f.file)));
+            const pages = ['/', '/app', '/login', '/register', '/forgot', '/reset', '/verify', '/invite', '/privacy', '/terms'];
+            const assets = { '/app.js': 'text/javascript; charset=utf-8', '/style.css': 'text/css; charset=utf-8', '/brand.js': 'text/javascript; charset=utf-8', '/favicon.svg': 'image/svg+xml', '/assets/mark.svg': 'image/svg+xml', '/assets/logo-light.svg': 'image/svg+xml', '/assets/logo-dark.svg': 'image/svg+xml' };
+            const filename = pages.includes(path) ? 'index.html' : Object.hasOwn(assets, path) ? path.slice(1) : null;
+            assert(filename, 'NOT_FOUND', 'Pagina non trovata', 404);
+            res.writeHead(200, { 'Content-Type': pages.includes(path) ? 'text/html; charset=utf-8' : assets[path], 'Cache-Control': 'no-cache' });
+            res.end(method === 'HEAD' ? '' : await readFile(join(webRoot, filename)));
         }
         catch (err) {
             if (res.headersSent) {

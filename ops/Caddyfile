@@ -1,0 +1,10 @@
+{$DOMAIN} {
+    encode zstd gzip
+    request_body {
+        max_size 130MB
+    }
+    # Intentionally no access log containing OAuth code/state query parameters.
+    reverse_proxy studio:3100 {
+        header_up X-Real-IP {remote_host}
+    }
+}

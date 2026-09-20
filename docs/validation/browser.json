@@ -1,6 +1,11 @@
 {
-  "mode": "Browser component/visual tests with in-memory API fixtures; NO live HTTP browser navigation",
-  "pages": [
+  "mode": "Offline browser component tests with explicit test API fixtures; not live OAuth or browser end-to-end",
+  "screens": [
+    "landing light",
+    "landing dark",
+    "login light",
+    "login dark",
+    "overview",
     "contents",
     "calendar",
     "knowledge",
@@ -10,9 +15,25 @@
     "inbox",
     "analytics",
     "jobs",
-    "settings"
+    "settings",
+    "setup",
+    "admin",
+    "team"
   ],
-  "token_dialog": "PASS",
+  "oauth_dialog": "PASS",
+  "google_config": "PASS",
+  "command_palette": "PASS",
+  "form_handlers": [
+    "workspace save",
+    "wizard next step",
+    "Google app config secret cleared",
+    "shared OAuth app config"
+  ],
+  "dark_control_colors": {
+    "background": "rgb(19, 34, 44)",
+    "color": "rgb(236, 244, 247)",
+    "opacity": "1"
+  },
   "errors": [],
-  "mobile_horizontal_overflow": false
+  "horizontal_overflow": []
 }

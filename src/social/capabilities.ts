@@ -19,7 +19,7 @@ export const CAPABILITIES: Record<Platform, Capability> = {
     'linkedin-page': { label: 'LinkedIn Page', postiz: 'linkedin-page', native: ['text'], limit: 3000, notes: 'Media attraverso Postiz. Native: w_organization_social e ruolo sulla pagina.' },
     x: { label: 'X', postiz: 'x', native: ['text'], limit: 280, notes: 'Media attraverso Postiz. Limite conservativo, URL pesati 23 caratteri; piano API autorizzato.' },
     telegram: { label: 'Telegram', postiz: 'telegram', native: ['text', 'message', 'image', 'carousel', 'video'], limit: 4096, notes: 'Bot API: bot amministratore nei canali, permessi nei gruppi. Caption media massimo 1024.' },
-    youtube: { label: 'YouTube / Shorts', postiz: 'youtube', native: [], limit: 5000, notes: 'Video tramite Postiz con titolo, visibilità e dichiarazione made-for-kids. Shorts classificati da YouTube.' },
+    youtube: { label: 'YouTube / Shorts', postiz: 'youtube', native: ['video', 'reel'], limit: 5000, notes: 'Upload nativo MP4 dalla media library oppure Postiz. OAuth Google, titolo, visibilità e dichiarazione made-for-kids obbligatori. Shorts classificati da YouTube.' },
     pinterest: { label: 'Pinterest', postiz: 'pinterest', native: ['image'], limit: 500, notes: 'Board autorizzata e immagine. Video attraverso Postiz.' },
     reddit: { label: 'Reddit', postiz: 'reddit', native: ['text'], limit: 40000, notes: 'Subreddit e titolo espliciti. Media e formati estesi attraverso Postiz.' },
     bluesky: { label: 'Bluesky', postiz: 'bluesky', native: ['text'], limit: 300, notes: 'Native: sessione AT Protocol. Media attraverso Postiz.' },
@@ -29,10 +29,15 @@ export const CAPABILITIES: Record<Platform, Capability> = {
     twitch: { label: 'Twitch chat', postiz: 'twitch', native: ['message', 'text'], limit: 500, notes: 'Messaggi chat, non pubblicazione di video o avvio stream.' },
     slack: { label: 'Slack', postiz: 'slack', native: ['message', 'text'], limit: 4000, notes: 'Messaggi a canali autorizzati del workspace.' }
 };
-export function weightedX(text: string): number { const compact = text.replace(/https?:\/\/\S+/g, 'x'.repeat(23)); let count = 0; for (const c of compact) {
-    const cp = c.codePointAt(0)!;
-    count += cp <= 0x10ff || (cp >= 0x2000 && cp <= 0x200d) || (cp >= 0x2010 && cp <= 0x201f) || (cp >= 0x2032 && cp <= 0x2037) ? 1 : 2;
-} return count; }
+export function weightedX(text: string): number {
+    const compact = text.replace(/https?:\/\/\S+/g, 'x'.repeat(23));
+    let count = 0;
+    for (const c of compact) {
+        const cp = c.codePointAt(0)!;
+        count += cp <= 0x10ff || (cp >= 0x2000 && cp <= 0x200d) || (cp >= 0x2010 && cp <= 0x201f) || (cp >= 0x2032 && cp <= 0x2037) ? 1 : 2;
+    }
+    return count;
+}
 export function validatePost(a: Account, p: SocialPost): void {
     const c = CAPABILITIES[a.platform];
     assert(a.enabled, 'ACCOUNT_DISABLED', 'Account disabilitato');
@@ -83,6 +88,8 @@ export function validatePost(a: Account, p: SocialPost): void {
     if (['whatsapp', 'messenger', 'instagram-dm'].includes(a.platform))
         assert(typeof p.options.recipient === 'string' && p.options.recipient.length > 0, 'RECIPIENT', 'Destinatario obbligatorio');
     if (a.platform === 'youtube') {
+        if (a.transport === 'direct')
+            assert(p.media.length === 1 && !!p.media[0]?.id && p.media[0]?.mime === 'video/mp4', 'YOUTUBE_ASSET', 'YouTube diretto richiede un MP4 locale nella media library');
         assert(typeof p.options.madeForKids === 'boolean', 'YOUTUBE_DISCLOSURE', 'Indicare madeForKids');
         assert(['public', 'private', 'unlisted'].includes(p.options.privacy), 'YOUTUBE_PRIVACY', 'Scegliere la visibilità YouTube');
     }

@@ -63,3 +63,9 @@ Meta: creazione container, polling GET, poi un secondo job di pubblicazione. Tik
 ## Organizzazione del codice
 
 `src/core`: servizi, sicurezza, persistenza, worker, media. `src/rag`: embedding e ranking. `src/agents`: provider e contratti. `src/social`: client e capacità. `src/integrations`: webhook e MCP. `src/api`: HTTP. `web`: dashboard. `tests`: test reali locali e contratti simulati, chiaramente denominati.
+
+## Estensioni 0.2.0
+
+`Settings` applica una allowlist di configurazione persistita cifrata e genera un file env dell’installazione. `Identity` gestisce OIDC Google, state/nonce/PKCE, inviti, verifica e reset. `SocialOAuth` gestisce app condivise/tenant, discovery, selezione esplicita e rinnovo serializzato di grant. `ExperienceApi` separa gli endpoint pubblici, di sessione e site-admin. Il frontend `app.js`/`brand.js`/`style.css` parla con tali servizi e conserva i flussi editoriali esistenti.
+
+Il database v2 aggiunge tabelle di site admin, identità, flags, auth actions, configurazione, recent-auth, grant e health senza reinterpretare i vecchi token come grant OAuth. L’esecuzione resta un processo Node singolo con worker e maintenance in-process.

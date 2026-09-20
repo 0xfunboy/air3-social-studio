@@ -9,5 +9,19 @@ import { MediaService } from './media.js';
 import { SocialHub } from '../social/hub.js';
 import { Studio } from './service.js';
 import { Worker } from './worker.js';
-export function bootstrap(cfg = config(), http, model, store) { const origins = (process.env.OUTBOUND_ORIGINS ?? '').split(',').map(x => x.trim()).filter(Boolean); const network = http ?? new Network(origins); const db = store ?? new Store(join(cfg.dataDir, 'studio.sqlite')); const auth = new Auth(db, cfg), rag = new Rag(db, new Embedder(cfg, network)), media = new MediaService(db, cfg, network), hub = new SocialHub(db, cfg, network), studio = new Studio(db, cfg, rag, media, hub, model ?? new LanguageModel(cfg, network)); return { cfg, network, store: db, auth, studio, worker: new Worker(studio) }; }
+import { Settings } from './settings.js';
+import { Identity } from '../integrations/identity.js';
+import { SocialOAuth } from '../integrations/oauth.js';
+export function bootstrap(cfg = config(), http, model, store) {
+    const db = store ?? new Store(join(cfg.dataDir, 'studio.sqlite'));
+    const auth = new Auth(db, cfg), settings = new Settings(db, cfg, auth);
+    settings.apply(true);
+    const origins = (process.env.OUTBOUND_ORIGINS ?? '').split(',').map(x => x.trim()).filter(Boolean);
+    const network = http ?? new Network(origins), rag = new Rag(db, new Embedder(cfg, network)), media = new MediaService(db, cfg, network), hub = new SocialHub(db, cfg, network);
+    const studio = new Studio(db, cfg, rag, media, hub, model ?? new LanguageModel(cfg, network));
+    const identity = new Identity(auth, settings, network), oauth = new SocialOAuth(studio, auth, network);
+    // Attached runtime services keep createApp(studio, auth) backward-compatible.
+    studio.extensions = { settings, identity, oauth, network };
+    return { cfg, network, store: db, auth, studio, settings, identity, oauth, worker: new Worker(studio) };
+}
 //# sourceMappingURL=bootstrap.js.map

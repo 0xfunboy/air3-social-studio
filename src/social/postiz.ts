@@ -38,14 +38,28 @@ export class PostizClient {
         assert(item?.postId, 'POSTIZ_RESPONSE', 'Risposta di creazione Postiz priva di postId');
         return { state: 'PROCESSING', externalId: String(item.postId), details: { transport: 'postiz', submittedAt: at } };
     }
-    async poll(a: Account, c: Bag, r: Receipt): Promise<Receipt> { const start = new Date(Date.parse(r.details?.submittedAt ?? now()) - 86400000).toISOString(), end = new Date(Date.now() + 86400000).toISOString(); const result = await this.http.request(this.base(c) + '/posts?' + new URLSearchParams({ startDate: start, endDate: end }), { headers: this.headers(c) }); const item = result.body.posts?.find((x: Bag) => x.id === r.externalId && x.integration?.id === a.targetId); if (!item)
-        return r; if (item.state === 'PUBLISHED')
-        return { ...r, state: 'PUBLISHED', url: item.releaseURL || undefined }; if (['ERROR', 'FAILED'].includes(item.state))
-        return { ...r, state: 'FAILED', error: 'Postiz segnala pubblicazione fallita; consultare il log del provider.' }; return r; }
-    async metrics(c: Bag, r: Receipt): Promise<Metrics> { const result = await this.http.request(this.base(c) + '/analytics/post/' + encodeURIComponent(r.externalId) + '?date=30', { headers: this.headers(c) }); assert(Array.isArray(result.body), 'ANALYTICS', 'Risposta analytics Postiz non valida'); const values: Record<string, number> = {}; for (const series of result.body) {
-        const points = [...(series.data ?? [])].sort((a, b) => String(a.date).localeCompare(String(b.date)));
-        const last = points.at(-1);
-        if (last && Number.isFinite(Number(last.total)))
-            values[String(series.label)] = Number(last.total);
-    } return { collectedAt: now(), values, source: 'postiz:last-observation-not-sum', raw: { series: result.body } }; }
+    async poll(a: Account, c: Bag, r: Receipt): Promise<Receipt> {
+        const start = new Date(Date.parse(r.details?.submittedAt ?? now()) - 86400000).toISOString(), end = new Date(Date.now() + 86400000).toISOString();
+        const result = await this.http.request(this.base(c) + '/posts?' + new URLSearchParams({ startDate: start, endDate: end }), { headers: this.headers(c) });
+        const item = result.body.posts?.find((x: Bag) => x.id === r.externalId && x.integration?.id === a.targetId);
+        if (!item)
+            return r;
+        if (item.state === 'PUBLISHED')
+            return { ...r, state: 'PUBLISHED', url: item.releaseURL || undefined };
+        if (['ERROR', 'FAILED'].includes(item.state))
+            return { ...r, state: 'FAILED', error: 'Postiz segnala pubblicazione fallita; consultare il log del provider.' };
+        return r;
+    }
+    async metrics(c: Bag, r: Receipt): Promise<Metrics> {
+        const result = await this.http.request(this.base(c) + '/analytics/post/' + encodeURIComponent(r.externalId) + '?date=30', { headers: this.headers(c) });
+        assert(Array.isArray(result.body), 'ANALYTICS', 'Risposta analytics Postiz non valida');
+        const values: Record<string, number> = {};
+        for (const series of result.body) {
+            const points = [...(series.data ?? [])].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+            const last = points.at(-1);
+            if (last && Number.isFinite(Number(last.total)))
+                values[String(series.label)] = Number(last.total);
+        }
+        return { collectedAt: now(), values, source: 'postiz:last-observation-not-sum', raw: { series: result.body } };
+    }
 }

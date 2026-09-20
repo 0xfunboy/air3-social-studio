@@ -1,9 +1,9 @@
 # Changelog
 
+## 0.2.0 — Paper & Graphite — 2026-09-20
+
+Frontend operativo derivato dai mockup approvati: landing, light/dark, isometric brand, login, wizard, admin, team e canali. Identità Google OIDC, verifica email, reset, inviti, site-admin separation e recent-auth. App OAuth di 12 famiglie, impostazioni condivise del gestore/override workspace, selezione target, rinnovo di grant condivisi, disconnessione e connection health. Webhook Meta global/workspace e isolamento target Telegram. YouTube MP4 nativo. Configurazione cifrata, env generato e export protetto. Installer, migrazione, proxy trust, Compose/Caddy, backup, lockfile e compiler offline. Suite ampliata e prove browser/installazione separate. Nessuna pubblicazione live eseguita nella preparazione.
+
 ## 0.1.0 — 2026-09-20
 
-Prima implementazione indipendente di AIR3 Social Studio. Multi-workspace e brand, ruoli e cifratura, RAG per ruolo, agenti editoriali con schemi, rendering JPEG/MP4, coda persistente, approvazione versionata, client social nativi/Postiz, inbox webhook, analytics, calendario, MCP, dashboard responsive e tool operativi.
-
-Correzioni durante il collaudo: numero di parametri dell'inserimento token, decifratura delle credenziali, consenso TikTok legato alla versione, separazione polling/finalizzazione Meta, checkpoint dopo scritture esterne, mancata somma di metriche cumulative, atomicità conversione piani/accettazione insight, firma che include la revisione della campagna, validazione indici embeddings e rifiuto dei formati che perderebbero media/caption.
-
-I test dei provider sono contratti HTTP simulati, non risultati live. Vedere il report di validazione.
+Prima consegna: backend SMM multibrand, RAG, agenti, renderer, approvazioni, scheduler, adapter social, Postiz/MCP/n8n e dashboard iniziale. 62 test locali nella consegna precedente. OAuth completo e frontend illustrato sono stati aggiunti in 0.2.0.

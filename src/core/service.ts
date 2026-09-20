@@ -17,12 +17,21 @@ const MUTABLE = ['DRAFT', 'GENERATED', 'REVIEW_FAILED', 'REVIEW_REQUIRED', 'WAIT
 const MESSAGING = ['whatsapp', 'messenger', 'instagram-dm'];
 const FORMATS = ['text', 'image', 'carousel', 'video', 'reel', 'story', 'message', 'template'];
 export function publicAccount(e: Entity<Account>): Entity<Bag> { const { credential, ...data } = e.data; return { ...e, data: { ...data, configured: !!credential } }; }
-function noSecrets(value: unknown): void { if (!value || typeof value !== 'object')
-    return; for (const [k, v] of Object.entries(value)) {
-    assert(!/(?:secret|password|accessToken|refreshToken|apiKey|botToken|privateKey)/i.test(k), 'SECRET_FIELD', 'I segreti vanno solo nel campo credentials cifrato');
-    noSecrets(v);
-} }
+function noSecrets(value: unknown): void {
+    if (!value || typeof value !== 'object')
+        return;
+    for (const [k, v] of Object.entries(value)) {
+        assert(!/(?:secret|password|accessToken|refreshToken|apiKey|botToken|privateKey)/i.test(k), 'SECRET_FIELD', 'I segreti vanno solo nel campo credentials cifrato');
+        noSecrets(v);
+    }
+}
 export class Studio {
+    extensions?: {
+        settings: import('./settings.js').Settings;
+        identity: import('../integrations/identity.js').Identity;
+        oauth: import('../integrations/oauth.js').SocialOAuth;
+        network: import('./http.js').Http;
+    };
     constructor(readonly store: Store, readonly cfg: Config, readonly rag: Rag, readonly media: MediaService, readonly hub: SocialHub, readonly model: Model) { }
     scope(p: Principal, brandId: string): Principal { this.store.get(p, brandId, 'brand'); return { ...p, brandId }; }
     brand(p: Principal, brandId: string): Entity<Brand> { return this.store.get<Brand>(p, brandId, 'brand'); }
@@ -112,8 +121,20 @@ export class Studio {
     }
     approveKnowledge(p: Principal, documentId: string, revision: number, approved: boolean): Entity<Knowledge> { requireRole(p, 'approver'); requireHuman(p); const e = this.store.get<Knowledge>(p, documentId, 'knowledge'); const updated = this.store.update(p, e.id, revision, { ...e.data, approved }); this.store.audit(p, e.brandId, 'knowledge.approval', e.id, { approved }); return updated; }
     saveCampaign(p: Principal, brandId: string, b: Bag, campaignId?: string): Entity<Bag> { requireRole(p, 'editor'); p = this.scope(p, brandId); noSecrets(b); const startAt = new Date(timestamp(b.startAt)).toISOString(), endAt = new Date(timestamp(b.endAt)).toISOString(); assert(startAt < endAt, 'DATES', 'Fine campagna deve seguire inizio'); const data = { name: text(b.name, 'nome', 200), objective: text(b.objective, 'obiettivo', 3000), brief: text(b.brief ?? '', 'brief', 10000, true), startAt, endAt, active: b.active !== false }; const old = campaignId ? this.store.get(p, campaignId, 'campaign') : undefined; return old ? this.store.update(p, old.id, Number(b.revision), data) : this.store.create(p, brandId, 'campaign', data); }
-    savePrompt(p: Principal, brandId: string, b: Bag): Entity<Bag> { requireRole(p, 'admin'); requireHuman(p); p = this.scope(p, brandId); const role = text(b.role, 'ruolo', 30); assert(CONTRACTS[role], 'ROLE', 'Ruolo agente sconosciuto'); const old = this.store.list(p, 'prompt', brandId).find(x => x.data.role === role); const data = { role, version: text(b.version, 'versione', 100), system: text(b.system, 'prompt', 15000) }; if (old)
-        this.store.create(p, brandId, 'promptHistory', old.data); const e = old ? this.store.update(p, old.id, Number(b.revision), data) : this.store.create(p, brandId, 'prompt', data); this.store.audit(p, brandId, 'prompt.saved', e.id, { role, version: data.version }); return e; }
+    savePrompt(p: Principal, brandId: string, b: Bag): Entity<Bag> {
+        requireRole(p, 'admin');
+        requireHuman(p);
+        p = this.scope(p, brandId);
+        const role = text(b.role, 'ruolo', 30);
+        assert(CONTRACTS[role], 'ROLE', 'Ruolo agente sconosciuto');
+        const old = this.store.list(p, 'prompt', brandId).find(x => x.data.role === role);
+        const data = { role, version: text(b.version, 'versione', 100), system: text(b.system, 'prompt', 15000) };
+        if (old)
+            this.store.create(p, brandId, 'promptHistory', old.data);
+        const e = old ? this.store.update(p, old.id, Number(b.revision), data) : this.store.create(p, brandId, 'prompt', data);
+        this.store.audit(p, brandId, 'prompt.saved', e.id, { role, version: data.version });
+        return e;
+    }
     content(p: Principal, contentId: string): Entity<Content> { return this.store.get<Content>(p, contentId, 'content'); }
     contentInput(p: Principal, brandId: string, b: Bag): Content {
         const a = this.hub.account(this.scope(p, brandId), text(b.accountId, 'account', 80));
@@ -121,10 +142,17 @@ export class Studio {
         if (b.campaignId)
             this.store.get(this.scope(p, brandId), String(b.campaignId), 'campaign');
         assert(Array.isArray(b.media ?? []) && Array.isArray(b.claims ?? []), 'VALIDATION', 'media e claims devono essere array');
-        const media: Media[] = (b.media ?? []).map((m: Bag) => { assert(m.id || m.url, 'MEDIA', 'Asset o URL richiesti'); if (m.id) {
-            const asset = this.media.asset(this.scope(p, brandId), String(m.id));
-            return { id: asset.id, mime: asset.data.mime, alt: text(m.alt ?? asset.data.alt ?? '', 'alt', 2000, true) };
-        } const url = text(m.url, 'URL media', 3000); const u = new URL(url); assert(u.protocol === 'https:' && !u.username && !u.password, 'MEDIA_URL', 'Media esterni: solo URL HTTPS senza credenziali'); return { url, mime: text(m.mime, 'MIME', 80), alt: text(m.alt ?? '', 'alt', 2000, true) }; });
+        const media: Media[] = (b.media ?? []).map((m: Bag) => {
+            assert(m.id || m.url, 'MEDIA', 'Asset o URL richiesti');
+            if (m.id) {
+                const asset = this.media.asset(this.scope(p, brandId), String(m.id));
+                return { id: asset.id, mime: asset.data.mime, alt: text(m.alt ?? asset.data.alt ?? '', 'alt', 2000, true) };
+            }
+            const url = text(m.url, 'URL media', 3000);
+            const u = new URL(url);
+            assert(u.protocol === 'https:' && !u.username && !u.password, 'MEDIA_URL', 'Media esterni: solo URL HTTPS senza credenziali');
+            return { url, mime: text(m.mime, 'MIME', 80), alt: text(m.alt ?? '', 'alt', 2000, true) };
+        });
         assert(media.length <= 10, 'MEDIA', 'Massimo 10 media');
         const options = object(b.options ?? {});
         noSecrets(options);
@@ -142,8 +170,11 @@ export class Studio {
         const data = this.contentInput(p, brandId, b);
         if (data.platform === 'tiktok' && old)
             data.options = { ...data.options, consent: false }; // Every edit needs new consent, even if a client resends a stale true value.
-        const e = this.store.transaction(() => { if (old)
-            this.store.create(p, brandId, 'contentHistory', { contentId: old.id, revision: old.revision, content: old.data }); return old ? this.store.update(p, old.id, Number(b.revision), data) : this.store.create(p, brandId, 'content', data); });
+        const e = this.store.transaction(() => {
+            if (old)
+                this.store.create(p, brandId, 'contentHistory', { contentId: old.id, revision: old.revision, content: old.data });
+            return old ? this.store.update(p, old.id, Number(b.revision), data) : this.store.create(p, brandId, 'content', data);
+        });
         this.store.audit(p, brandId, 'content.saved', e.id, { revision: e.revision });
         return e;
     }
@@ -272,16 +303,23 @@ export class Studio {
     async agent(p: Principal, brandId: string, role: string, input: Bag, images: {
         mime: string;
         data: string;
-    }[] = []): Promise<Bag> { const contract = CONTRACTS[role]; assert(contract, 'AGENT', 'Ruolo non valido'); const custom = this.store.list(p, 'prompt', brandId).find(x => x.data.role === role)?.data; const version = custom?.version ?? contract.version; const execution = this.store.create(p, brandId, 'execution', { role, promptVersion: version, model: process.env['LLM_MODEL_' + role.toUpperCase()] || this.model.name, startedAt: now(), status: 'RUNNING' as const, input, inputHash: sha(stable(input)), imageCount: images.length }); try {
-        const out = await this.model.generate((custom?.system ?? contract.system) + GROUNDING, input, contract.schema, images, role);
-        validateSchema(out, contract.schema);
-        this.store.update(p, execution.id, execution.revision, { ...execution.data, status: 'SUCCESS' as const, finishedAt: now(), output: out });
-        return out;
+    }[] = []): Promise<Bag> {
+        const contract = CONTRACTS[role];
+        assert(contract, 'AGENT', 'Ruolo non valido');
+        const custom = this.store.list(p, 'prompt', brandId).find(x => x.data.role === role)?.data;
+        const version = custom?.version ?? contract.version;
+        const execution = this.store.create(p, brandId, 'execution', { role, promptVersion: version, model: process.env['LLM_MODEL_' + role.toUpperCase()] || this.model.name, startedAt: now(), status: 'RUNNING' as const, input, inputHash: sha(stable(input)), imageCount: images.length });
+        try {
+            const out = await this.model.generate((custom?.system ?? contract.system) + GROUNDING, input, contract.schema, images, role);
+            validateSchema(out, contract.schema);
+            this.store.update(p, execution.id, execution.revision, { ...execution.data, status: 'SUCCESS' as const, finishedAt: now(), output: out });
+            return out;
+        }
+        catch (err) {
+            this.store.update(p, execution.id, execution.revision, { ...execution.data, status: 'FAILED' as const, finishedAt: now(), error: safeError(err) });
+            throw err;
+        }
     }
-    catch (err) {
-        this.store.update(p, execution.id, execution.revision, { ...execution.data, status: 'FAILED' as const, finishedAt: now(), error: safeError(err) });
-        throw err;
-    } }
     recent(p: Principal, brandId: string): Bag[] { return this.store.list<Content>(p, 'content', brandId, 50).map(x => ({ id: x.id, at: x.createdAt, status: x.data.status, platform: x.data.platform, objective: x.data.objective, title: x.data.title, text: x.data.text.slice(0, 2000) })); }
     async context(p: Principal, e: Entity<Content>, role: string): Promise<Bag> { const b = this.brand(p, e.brandId); return { brand: b.data, brandRevision: b.revision, platform: e.data.platform, format: e.data.format, objective: e.data.objective, topic: e.data.title, now: now(), sources: await this.rag.retrieve(p, e.brandId, e.data.title + ' ' + e.data.objective, role, e.data.platform), campaigns: this.store.list(p, 'campaign', e.brandId).filter(x => x.data.active && timestamp(x.data.startAt) <= Date.now() && timestamp(x.data.endAt) >= Date.now()).map(x => x.data), recentPosts: this.recent(p, e.brandId), insights: this.store.list(p, 'insight', e.brandId, 20).filter(x => x.data.accepted).map(x => x.data) }; }
     async generate(p: Principal, contentId: string, mode: string): Promise<void> {
@@ -347,15 +385,25 @@ export class Studio {
             this.schedule(p, e.id, e.revision, now());
         }
     }
-    async analyze(p: Principal, brandId: string): Promise<Entity<Bag>> { requireRole(p, 'editor'); p = this.scope(p, brandId); const snapshots = this.store.list<Metrics & {
-        contentId: string;
-    }>(p, 'metric', brandId, 5000); assert(snapshots.length, 'NO_METRICS', 'Nessuna metrica disponibile'); const latest = new Map<string, Entity<Metrics & {
-        contentId: string;
-    }>>(); for (const m of snapshots) {
-        const old = latest.get(m.data.contentId);
-        if (!old || m.data.collectedAt > old.data.collectedAt)
-            latest.set(m.data.contentId, m);
-    } const rows = [...latest.values()].map(m => { const c = this.content(p, m.data.contentId); return { snapshotId: m.id, contentId: c.id, platform: c.data.platform, format: c.data.format, objective: c.data.objective, metrics: m.data.values, collectedAt: m.data.collectedAt, source: m.data.source }; }); const output = await this.agent(p, brandId, 'analyst', { brand: this.brand(p, brandId).data, sampleSize: rows.length, rows }); return this.store.create(p, brandId, 'insight', { ...output, sampleSize: rows.length, snapshotIds: rows.map(x => x.snapshotId), accepted: false, createdAt: now() }); }
+    async analyze(p: Principal, brandId: string): Promise<Entity<Bag>> {
+        requireRole(p, 'editor');
+        p = this.scope(p, brandId);
+        const snapshots = this.store.list<Metrics & {
+            contentId: string;
+        }>(p, 'metric', brandId, 5000);
+        assert(snapshots.length, 'NO_METRICS', 'Nessuna metrica disponibile');
+        const latest = new Map<string, Entity<Metrics & {
+            contentId: string;
+        }>>();
+        for (const m of snapshots) {
+            const old = latest.get(m.data.contentId);
+            if (!old || m.data.collectedAt > old.data.collectedAt)
+                latest.set(m.data.contentId, m);
+        }
+        const rows = [...latest.values()].map(m => { const c = this.content(p, m.data.contentId); return { snapshotId: m.id, contentId: c.id, platform: c.data.platform, format: c.data.format, objective: c.data.objective, metrics: m.data.values, collectedAt: m.data.collectedAt, source: m.data.source }; });
+        const output = await this.agent(p, brandId, 'analyst', { brand: this.brand(p, brandId).data, sampleSize: rows.length, rows });
+        return this.store.create(p, brandId, 'insight', { ...output, sampleSize: rows.length, snapshotIds: rows.map(x => x.snapshotId), accepted: false, createdAt: now() });
+    }
     async acceptInsight(p: Principal, insightId: string, revision: number): Promise<Entity<Bag>> {
         requireRole(p, 'approver');
         requireHuman(p);
@@ -374,12 +422,41 @@ export class Studio {
         const items: Content[] = e.data.ideas.map((idea: Bag) => this.contentInput(p, e.brandId, { ...idea, title: idea.topic, text: '', options: { suggestedAt: idea.suggestedAt } }));
         return this.store.transaction(() => { const current = this.store.get(p, e.id, 'plan'); assert(current.revision === e.revision && current.data.status === 'PROPOSED', 'CONFLICT', 'Piano già modificato', 409); const drafts = items.map(data => this.store.create(p, e.brandId, 'content', data)); this.store.update(p, e.id, e.revision, { ...e.data, status: 'DRAFTED', contentIds: drafts.map(x => x.id) }); this.store.audit(p, e.brandId, 'plan.converted', e.id, { contentIds: drafts.map(x => x.id) }); return drafts; });
     }
-    async plan(p: Principal, brandId: string, objective: string): Promise<Entity<Bag>> { requireRole(p, 'editor'); p = this.scope(p, brandId); const accounts = this.store.list<Account>(p, 'account', brandId).filter(x => x.data.enabled).map(x => ({ id: x.id, platform: x.data.platform, formats: x.data.transport === 'direct' ? CAPABILITIES[x.data.platform].native : FORMATS })); assert(accounts.length, 'NO_ACCOUNT', 'Collegare almeno un account'); const output = await this.agent(p, brandId, 'planner', { brand: this.brand(p, brandId).data, objective, accounts, now: now(), recentPosts: this.recent(p, brandId), campaigns: this.store.list(p, 'campaign', brandId).map(x => x.data), insights: this.store.list(p, 'insight', brandId).filter(x => x.data.accepted).map(x => x.data) }); for (const idea of output.ideas) {
-        assert(accounts.some(x => x.id === idea.accountId), 'PLAN_ACCOUNT', 'Account inventato nel piano');
-        timestamp(idea.suggestedAt);
-    } return this.store.create(p, brandId, 'plan', { ...output, status: 'PROPOSED' as const }); }
-    saveContact(p: Principal, brandId: string, b: Bag): Entity<Bag> { requireRole(p, 'admin'); requireHuman(p); p = this.scope(p, brandId); this.hub.account(p, text(b.accountId, 'account', 80)); const recipient = text(b.recipient, 'destinatario', 200), e = this.store.list(p, 'contact', brandId).find(x => x.data.accountId === b.accountId && x.data.recipient === recipient); const data = { ...e?.data, accountId: b.accountId, recipient, name: text(b.name ?? recipient, 'nome', 200), optIn: b.optIn === true, consentEvidence: text(b.consentEvidence ?? '', 'evidenza consenso', 3000, true), recordedBy: p.userId, recordedAt: now() }; if (data.optIn)
-        assert(data.consentEvidence.length >= 8, 'CONSENT', 'Inserire evidenza del consenso'); return e ? this.store.update(p, e.id, e.revision, data) : this.store.create(p, brandId, 'contact', data); }
-    recordMetric(p: Principal, contentId: string, b: Bag): Entity<Bag> { requireRole(p, 'editor'); const e = this.content(p, contentId); assert(e.data.status === 'PUBLISHED', 'STATE', 'Metriche solo per contenuti pubblicati'); const values = object(b.values); assert(Object.keys(values).length <= 50, 'METRICS', 'Troppe metriche'); for (const [k, v] of Object.entries(values))
-        assert(k.length <= 100 && typeof v === 'number' && Number.isFinite(v) && v >= 0, 'METRICS', 'Valori numerici finiti non negativi'); const collectedAt = new Date(timestamp(b.collectedAt ?? now())).toISOString(); assert(timestamp(collectedAt) <= Date.now() + 60000, 'METRICS_DATE', 'Osservazione futura non consentita'); const result = this.store.create(p, e.brandId, 'metric', { contentId: e.id, values, collectedAt, source: text(b.source, 'fonte metriche', 1000), importedBy: p.userId }); this.store.audit(p, e.brandId, 'metric.imported', result.id, { contentId }); return result; }
+    async plan(p: Principal, brandId: string, objective: string): Promise<Entity<Bag>> {
+        requireRole(p, 'editor');
+        p = this.scope(p, brandId);
+        const accounts = this.store.list<Account>(p, 'account', brandId).filter(x => x.data.enabled).map(x => ({ id: x.id, platform: x.data.platform, formats: x.data.transport === 'direct' ? CAPABILITIES[x.data.platform].native : FORMATS }));
+        assert(accounts.length, 'NO_ACCOUNT', 'Collegare almeno un account');
+        const output = await this.agent(p, brandId, 'planner', { brand: this.brand(p, brandId).data, objective, accounts, now: now(), recentPosts: this.recent(p, brandId), campaigns: this.store.list(p, 'campaign', brandId).map(x => x.data), insights: this.store.list(p, 'insight', brandId).filter(x => x.data.accepted).map(x => x.data) });
+        for (const idea of output.ideas) {
+            assert(accounts.some(x => x.id === idea.accountId), 'PLAN_ACCOUNT', 'Account inventato nel piano');
+            timestamp(idea.suggestedAt);
+        }
+        return this.store.create(p, brandId, 'plan', { ...output, status: 'PROPOSED' as const });
+    }
+    saveContact(p: Principal, brandId: string, b: Bag): Entity<Bag> {
+        requireRole(p, 'admin');
+        requireHuman(p);
+        p = this.scope(p, brandId);
+        this.hub.account(p, text(b.accountId, 'account', 80));
+        const recipient = text(b.recipient, 'destinatario', 200), e = this.store.list(p, 'contact', brandId).find(x => x.data.accountId === b.accountId && x.data.recipient === recipient);
+        const data = { ...e?.data, accountId: b.accountId, recipient, name: text(b.name ?? recipient, 'nome', 200), optIn: b.optIn === true, consentEvidence: text(b.consentEvidence ?? '', 'evidenza consenso', 3000, true), recordedBy: p.userId, recordedAt: now() };
+        if (data.optIn)
+            assert(data.consentEvidence.length >= 8, 'CONSENT', 'Inserire evidenza del consenso');
+        return e ? this.store.update(p, e.id, e.revision, data) : this.store.create(p, brandId, 'contact', data);
+    }
+    recordMetric(p: Principal, contentId: string, b: Bag): Entity<Bag> {
+        requireRole(p, 'editor');
+        const e = this.content(p, contentId);
+        assert(e.data.status === 'PUBLISHED', 'STATE', 'Metriche solo per contenuti pubblicati');
+        const values = object(b.values);
+        assert(Object.keys(values).length <= 50, 'METRICS', 'Troppe metriche');
+        for (const [k, v] of Object.entries(values))
+            assert(k.length <= 100 && typeof v === 'number' && Number.isFinite(v) && v >= 0, 'METRICS', 'Valori numerici finiti non negativi');
+        const collectedAt = new Date(timestamp(b.collectedAt ?? now())).toISOString();
+        assert(timestamp(collectedAt) <= Date.now() + 60000, 'METRICS_DATE', 'Osservazione futura non consentita');
+        const result = this.store.create(p, e.brandId, 'metric', { contentId: e.id, values, collectedAt, source: text(b.source, 'fonte metriche', 1000), importedBy: p.userId });
+        this.store.audit(p, e.brandId, 'metric.imported', result.id, { contentId });
+        return result;
+    }
 }

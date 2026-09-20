@@ -4,17 +4,18 @@ Nessun modello fittizio viene usato se manca la configurazione: generazione, pia
 
 ## Gemini nativo
 
-Impostare in `.env`:
+Preferire **Amministrazione → Modelli AI** o il terzo passo del wizard. I valori persistiti dal pannello prevalgono sui bootstrap env. Per una configurazione iniziale via `.env`:
 
 ```dotenv
 LLM_PROVIDER=gemini
 LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta
 LLM_MODEL=
+LLM_API_KEY=
 GEMINI_API_KEY=
 GEMINI_IMAGE_MODEL=
 ```
 
-Inserire un modello testuale con supporto agli output JSON strutturati e, separatamente, un modello di generazione immagini disponibile al proprio progetto Google. I valori restano intenzionalmente vuoti fino alla configurazione: nessun modello corrente o quota viene dato per garantito. Non impostare chiavi in frontend o in prompt.
+Inserire in `LLM_API_KEY` la chiave per il modello testuale; `GEMINI_API_KEY` è la chiave separata per le immagini. Inserire un modello testuale con supporto agli output JSON strutturati e, separatamente, un modello di generazione immagini disponibile al proprio progetto Google. I valori restano intenzionalmente vuoti fino alla configurazione: nessun modello corrente o quota viene dato per garantito. Non impostare chiavi in frontend o in prompt.
 
 Il client usa `:generateContent`, `systemInstruction`, `responseMimeType` e `responseJsonSchema`; per immagini usa risposta multimodale e salva realmente i byte ricevuti. Il modello immagine non è necessario per i template a colore uniforme o con sfondi caricati manualmente.
 

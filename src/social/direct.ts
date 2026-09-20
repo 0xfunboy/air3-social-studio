@@ -48,7 +48,7 @@ export class DirectClients {
             }
             case 'reddit': {
                 const form = new URLSearchParams({ api_type: 'json', sr: a.targetId, kind: 'self', title: p.title, text: p.text, resubmit: 'false' });
-                const r = await this.http.request('https://oauth.reddit.com/api/submit', { method: 'POST', headers: { Authorization: `Bearer ${c.accessToken}`, 'User-Agent': 'air3-social-studio/0.1 by ' + String(c.username ?? 'operator'), 'Content-Type': 'application/x-www-form-urlencoded' }, body: form.toString() });
+                const r = await this.http.request('https://oauth.reddit.com/api/submit', { method: 'POST', headers: { Authorization: `Bearer ${c.accessToken}`, 'User-Agent': 'air3-social-studio/0.2 by ' + String(c.username ?? 'operator'), 'Content-Type': 'application/x-www-form-urlencoded' }, body: form.toString() });
                 assert(!r.body.json?.errors?.length && r.body.json?.data?.name, 'REDDIT_RESPONSE', 'Reddit ha rifiutato il post');
                 return { state: 'PUBLISHED', externalId: r.body.json.data.name, url: r.body.json.data.url };
             }

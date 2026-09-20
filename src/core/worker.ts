@@ -7,11 +7,21 @@ export class Worker {
     private running = false;
     private closed = false;
     constructor(readonly studio: Studio) { }
-    start(): void { if (this.timer)
-        return; this.studio.store.recover(); this.timer = setInterval(() => void this.tick(), 1000); this.timer.unref(); void this.tick(); }
-    async stop(): Promise<void> { this.closed = true; if (this.timer)
-        clearInterval(this.timer); while (this.running)
-        await new Promise(r => setTimeout(r, 25)); }
+    start(): void {
+        if (this.timer)
+            return;
+        this.studio.store.recover();
+        this.timer = setInterval(() => void this.tick(), 1000);
+        this.timer.unref();
+        void this.tick();
+    }
+    async stop(): Promise<void> {
+        this.closed = true;
+        if (this.timer)
+            clearInterval(this.timer);
+        while (this.running)
+            await new Promise(r => setTimeout(r, 25));
+    }
     async tick(): Promise<boolean> {
         if (this.running || this.closed)
             return false;
@@ -141,15 +151,18 @@ export class Worker {
         }
         assert(false, 'JOB_KIND', 'Tipo job sconosciuto');
     }
-    private follow(p: Principal, e: import('./types.js').Entity<Content>, r: Receipt): void { const store = this.studio.store; if (r.state === 'PROCESSING') {
-        if (r.details?.stage === 'webhook')
-            store.enqueue(p, e.brandId, 'receiptTimeout', e.id, {}, Date.now() + 72 * 3600000, `timeout:${e.id}:${r.externalId}`);
-        else
-            store.enqueue(p, e.brandId, 'poll', e.id, {}, Date.now() + 5000, `poll:${e.id}:${r.externalId}`);
+    private follow(p: Principal, e: import('./types.js').Entity<Content>, r: Receipt): void {
+        const store = this.studio.store;
+        if (r.state === 'PROCESSING') {
+            if (r.details?.stage === 'webhook')
+                store.enqueue(p, e.brandId, 'receiptTimeout', e.id, {}, Date.now() + 72 * 3600000, `timeout:${e.id}:${r.externalId}`);
+            else
+                store.enqueue(p, e.brandId, 'poll', e.id, {}, Date.now() + 5000, `poll:${e.id}:${r.externalId}`);
+        }
+        else if (r.state === 'PUBLISHED') {
+            for (const hours of [24, 72])
+                store.enqueue(p, e.brandId, 'metrics', e.id, { window: hours + 'h' }, Date.now() + hours * 3600000, `metric:${e.id}:${hours}:${r.externalId}`);
+            store.audit(p, e.brandId, 'content.published', e.id, { externalId: r.externalId, at: now() });
+        }
     }
-    else if (r.state === 'PUBLISHED') {
-        for (const hours of [24, 72])
-            store.enqueue(p, e.brandId, 'metrics', e.id, { window: hours + 'h' }, Date.now() + hours * 3600000, `metric:${e.id}:${hours}:${r.externalId}`);
-        store.audit(p, e.brandId, 'content.published', e.id, { externalId: r.externalId, at: now() });
-    } }
 }

@@ -14,10 +14,15 @@ export class FakeHttp implements Http {
         json: Bag;
     }[] = [];
     handler: (url: string, init: RequestInit, json: Bag) => Promise<HttpResult> | HttpResult = () => { throw new Error('Unstubbed test HTTP call'); };
-    async request(url: string, init: RequestInit = {}): Promise<HttpResult> { let json: Bag = {}; try {
-        json = typeof init.body === 'string' ? JSON.parse(init.body) : {};
+    async request(url: string, init: RequestInit = {}): Promise<HttpResult> {
+        let json: Bag = {};
+        try {
+            json = typeof init.body === 'string' ? JSON.parse(init.body) : {};
+        }
+        catch { }
+        this.calls.push({ url, init, json });
+        return this.handler(url, init, json);
     }
-    catch { } this.calls.push({ url, init, json }); return this.handler(url, init, json); }
 }
 export const response = (body: unknown, status = 200, headers: Record<string, string> = {}): HttpResult => ({ body, status, headers: new Headers(headers) });
 export class FakeModel implements Model {

@@ -1,5 +1,5 @@
 import { assert, now, safeError } from '../core/util.js';
-import { equal, hmac } from '../core/crypto.js';
+import { decrypt, equal, hmac } from '../core/crypto.js';
 /** Receives provider-authenticated events only. Public request bodies never set lastInboundAt. */
 export class Webhooks {
     studio;
@@ -40,6 +40,33 @@ export class Webhooks {
                         continue;
                     this.inbound(p, a, String(event.message.mid), String(event.sender?.id), String(event.message.text ?? '[media]'), new Date(Number(event.timestamp)).toISOString());
                 }
+            }
+        }
+    }
+    metaSettings(wid, global = false) {
+        const r = (global ? this.studio.store.db.prepare('SELECT value FROM installation WHERE key=?').get('oauth:meta') : this.studio.store.db.prepare('SELECT value FROM workspace_settings WHERE workspace_id=? AND key=?').get(wid, 'oauth:meta'));
+        assert(r, 'NOT_FOUND', 'Webhook non trovato', 404);
+        const a = decrypt(r.value, this.studio.cfg.masterKey, global ? 'installation:oauth:meta' : `oauth-app:${wid}:meta`);
+        assert(a.enabled !== false && a.clientSecret, 'WEBHOOK', 'App disabilitata', 403);
+        return a;
+    }
+    metaChallenge(wid, q, global = false) { const a = this.metaSettings(wid, global); assert(a.webhookVerifyToken && q.get('hub.mode') === 'subscribe' && equal(q.get('hub.verify_token') ?? '', a.webhookVerifyToken), 'WEBHOOK_VERIFY', 'Token non valido', 403); return q.get('hub.challenge') ?? ''; }
+    async metaReceive(wid, headers, raw, global = false) {
+        const app = this.metaSettings(wid, global);
+        assert(equal(String(headers['x-hub-signature-256'] ?? ''), 'sha256=' + hmac(raw, app.clientSecret)), 'WEBHOOK_SIGNATURE', 'Firma non valida', 403);
+        const workspaces = global ? this.studio.store.db.prepare('SELECT id FROM workspaces').all() : [{ id: wid }];
+        for (const w of workspaces) {
+            const p = { workspaceId: w.id, userId: 'webhook', role: 'admin', via: 'system' };
+            for (const e of this.studio.store.list(p, 'account', undefined, 10000)) {
+                if (!e.data.enabled || e.data.transport !== 'direct' || !['whatsapp', 'messenger', 'instagram-dm', 'instagram'].includes(e.data.platform))
+                    continue;
+                const c = this.studio.hub.credentials(e);
+                if (c.oauthProvider !== 'meta' || c.oauthClientId !== app.clientId || (c.oauthAppScope ?? 'workspace') !== (global ? 'installation' : 'workspace'))
+                    continue;
+                if (c.appSecret !== app.clientSecret)
+                    continue;
+                // The per-account handler still validates the signature and exact destination ID.
+                await this.receive(e.id, headers, raw);
             }
         }
     }
@@ -114,11 +141,11 @@ export class Webhooks {
             await this.studio.hub.direct.telegram(c, 'answerCallbackQuery', { callback_query_id: query.id, text: reply.slice(0, 190), show_alert: true });
             return;
         }
-        if (message?.chat?.id && message.message_id) {
+        if (message?.chat?.id && message.message_id && String(message.chat.id) === String(a.data.targetId)) {
             this.inbound(p, a, 'tgmsg:' + message.chat.id + ':' + message.message_id, String(message.chat.id), String(message.text ?? message.caption ?? '[media]'), new Date(Number(message.date) * 1000).toISOString());
         }
         this.once(a, 'tg:' + b.update_id, () => { });
     }
-    async installTelegram(p, accountId) { const a = this.studio.hub.account(p, accountId), c = this.studio.hub.credentials(a); assert(a.data.platform === 'telegram' && c.webhookSecret, 'TELEGRAM_CONFIG', 'Configurare webhookSecret nel bot'); assert(this.studio.cfg.baseUrl.startsWith('https://'), 'HTTPS', 'Un webhook Telegram richiede BASE_URL HTTPS pubblica'); return this.studio.hub.direct.telegram(c, 'setWebhook', { url: this.studio.cfg.baseUrl + '/webhooks/' + a.id, secret_token: c.webhookSecret, allowed_updates: ['message', 'channel_post', 'callback_query'], drop_pending_updates: false }); }
+    async installTelegram(p, accountId) { const a = this.studio.hub.account(p, accountId), c = this.studio.hub.credentials(a); assert(a.data.platform === 'telegram' && c.webhookSecret, 'TELEGRAM_CONFIG', 'Configurare webhookSecret nel bot'); const accounts = this.studio.store.list({ ...p, brandId: undefined }, 'account', undefined, 10000); assert(!accounts.some(x => x.id !== a.id && x.data.enabled && x.data.platform === 'telegram' && this.studio.hub.credentials(x).botToken === c.botToken), 'TELEGRAM_SINGLE_WEBHOOK', 'Telegram permette un solo webhook per bot. Usare un bot distinto per ciascun canale con inbox/approvazioni.'); assert(this.studio.cfg.baseUrl.startsWith('https://'), 'HTTPS', 'Un webhook Telegram richiede BASE_URL HTTPS pubblica'); return this.studio.hub.direct.telegram(c, 'setWebhook', { url: this.studio.cfg.baseUrl + '/webhooks/' + a.id, secret_token: c.webhookSecret, allowed_updates: ['message', 'channel_post', 'callback_query'], drop_pending_updates: false }); }
 }
 //# sourceMappingURL=webhooks.js.map

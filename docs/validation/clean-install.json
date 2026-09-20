@@ -1,10 +1,20 @@
 {
-  "mode": "Clean extracted-layout smoke, real HTTP and persistent SQLite; no LLM/social calls",
-  "npm_start_without_node_modules": "PASS",
-  "healthz": "PASS",
-  "login_and_persist_brand": "PASS",
-  "static_dashboard": "PASS",
-  "doctor_real_ffmpeg": "PASS",
-  "sqlite_consistent_backup": "PASS",
-  "backup_integrity_and_brand": "PASS"
+  "mode": "Clean install, real HTTP and persistent SQLite. External provider calls: none.",
+  "archive": "AIR3-Social-Studio-v0.2.0.zip",
+  "offline_compile_and_test": "PASS",
+  "test_summary": [
+    "# tests 115",
+    "# pass 115",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "installer_keeps_existing_key": "PASS",
+  "start_without_node_modules": "PASS",
+  "public_routes_and_csp": "PASS",
+  "real_login_brand_wizard_env": "PASS",
+  "shared_oauth_authorize_url_no_external_calls": "PASS",
+  "local_doctor_ffmpeg": "PASS",
+  "production_gate_flags_missing_config": "PASS",
+  "consistent_database_backup": "PASS",
+  "restart_persists_session_brand_wizard_env_oauth": "PASS"
 }

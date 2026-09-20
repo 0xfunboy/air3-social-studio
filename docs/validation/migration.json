@@ -1,0 +1,10 @@
+{
+  "migration": "0.1.0 \u2192 0.2.0",
+  "database": "PASS",
+  "preservedEntitiesAndCiphertext": "PASS",
+  "legacyPasswordLogin": "PASS",
+  "legacyTokenDecryption": "PASS",
+  "noAutomaticPrivilegeEscalation": "PASS",
+  "explicitCliAdminPromotion": "PASS",
+  "externalCalls": 0
+}

@@ -1,62 +1,75 @@
-# Collaudo della release 0.1.0
+# Collaudo 0.2.0 · Paper & Graphite
 
-Eseguito il 20 settembre 2026 sul compilato incluso nello ZIP. Esito finale: **62 test Node passati, 0 fallimenti, 0 saltati**. Node 22.16.0, TypeScript 5.8.3, SQLite di Node, FFmpeg/ffprobe installati nel container Linux. Non è una certificazione indipendente di sicurezza o produzione.
+Eseguito il 20 settembre 2026. **115 test Node passati, zero fallimenti, zero saltati.** Ambiente effettivo: Linux, Node 22.16.0, TypeScript 5.8.3, SQLite Node e FFmpeg/ffprobe locali. Questo documento distingue prove reali locali, risposte provider simulate e verifiche esterne mancanti.
 
 ## Risultati
 
-| Controllo | Esito | Tipo di prova |
+| Controllo | Esito | Prova |
 |---|---|---|
-| TypeScript strict + noUncheckedIndexedAccess | PASS | Compilazione reale |
-| 62 test Node | PASS | Esecuzione reale; i provider esterni sono sostituiti da fixture HTTP |
-| Sessioni/password/CSRF/Origin/ruoli e scope brand | PASS | HTTP locale e database reali |
-| Approvazione legata a payload/fonti/brand/account/campagna | PASS | Workflow e persistenza reali |
-| RAG, dedup, embedding-space e validazione indici/dimensioni | PASS | Algoritmi reali, vettori di test, endpoint remoto simulato |
-| Retry, lease, ripartenza e scritture con esito incerto | PASS | Macchina a stati reale, risposte/errori HTTP simulati |
-| Client nativi e Postiz | PASS contratti | URL, header, payload e parsing su risposte dichiarate nei test; non account live |
-| Webhook Meta/TG | PASS | Firme calcolate realmente con segreti di test, replay/target/permessi verificati |
-| Rendering JPEG e slideshow MP4 | PASS | FFmpeg/ffprobe reali, byte media verificati |
-| Testo oltre spazio disponibile nel template | PASS | Il renderer rifiuta overflow invece di sovrapporre titolo/corpo |
-| UI desktop 1440 e mobile 390 | PASS | Browser headless, API fixture in memoria, nessun errore JS rilevato né overflow orizzontale mobile |
-| Avvio copia pulita senza node_modules | PASS | Setup, npm start, HTTP login, creazione brand e file statici reali |
-| Doctor + backup SQLite | PASS | FFmpeg reale, copia consistente, integrity_check e presenza brand nel backup |
+| TypeScript strict / noUncheckedIndexedAccess | PASS | Compilazione reale |
+| 115 test Node | PASS | Servizi reali; provider esterni con fixture HTTP esplicite |
+| Installazione npm offline | PASS | Tarball inclusi, package-lock, cache inizialmente vuota |
+| Login, CSRF, Origin, sessioni, ruoli, isolamento | PASS | HTTP locale e SQLite reali |
+| Site admin separato da customer admin | PASS | Accessi negati a configurazione e provisioning globali |
+| Google OIDC | PASS locale | RSA/JWKS, firma e claim realmente verificati con chiavi di test; token endpoint simulato |
+| Inviti, verifica email, reset, disabled flags | PASS locale | Token monouso e scadenze, hash, invalidazione sessioni; mail simulata |
+| OAuth di tutte le 12 famiglie | PASS contratti | Stato, PKCE dove configurato, token exchange e discovery su fixture dedicate |
+| App condivise e override | PASS | Segreti non copiati al cliente, ACL, source binding e selezione dopo consenso |
+| Rinnovo shared grant | PASS contratti | Un rinnovo per più destinazioni, preservate revisioni editoriali |
+| Meta globale/workspace e Telegram | PASS locale | HMAC/binding reali con segreti di test, target e workspace distinti |
+| Proxy spoofing | PASS | X-Real-IP accettato solo da un peer esplicitamente fidato |
+| RAG ed embeddings | PASS locale | Algoritmi veri, vettori test, filtro brand, ruolo, fonte, approvazione e spazio embedding |
+| Approvazioni/scheduler/retry | PASS | Macchina a stati reale, revisioni, esiti incerti e riconciliazione |
+| Native social e Postiz | PASS contratti | Endpoint/header/payload/parsing implementati, non grant reali |
+| YouTube MP4 | PASS contratti | Byte locali e sessione resumable simulata, origin verificata, stato e metriche |
+| JPEG e slideshow MP4 | PASS | FFmpeg/ffprobe reali; rifiuto overflow del template |
+| Browser pagine e temi | PASS | 18 voci di schermata, più temi secondari/dialoghi, dati di collaudo dichiarati |
+| Moduli browser | PASS fixture | Salvataggio workspace, passo wizard, Google secret oscurato, app OAuth condivisa |
+| Responsive e comandi | PASS | 320/390/768/1440 px nei flussi coperti, nessun overflow, palette e dialoghi |
+| Installazione pulita | PASS | Avvio senza node_modules, HTTP reale, brand, wizard, env e restart |
+| Readiness gate locale | PASS | Segnala ACTION_REQUIRED per requisiti mancanti invece di simulare un deploy pronto |
+| Backup | PASS | SQLite backup API, integrity_check, entità conservate |
+| Migrazione dal vero ZIP 0.1.0 | PASS | Entità/ciphertext conservati, password e token leggibili, site admin solo da CLI esplicita |
 
-Report dettagliati: [TAP Node](validation/node-tests.tap), [browser](validation/browser.json), [avvio pulito/backup](validation/clean-install.json).
+Report: [TAP Node](validation/node-tests.tap), [browser](validation/browser.json), [installazione](validation/clean-install.json), [migrazione](validation/migration.json). I valori di durata dipendono dalla macchina e non sono benchmark del prodotto.
 
-## Confine delle prove
+## Confine browser / backend
 
-Non sono state usate credenziali social reali e non è stato pubblicato alcun contenuto esterno. Gemini, endpoint compatibili, immagini generate da modello, embeddings remoti, scope OAuth, refresh token, audit TikTok, webhook dai server dei provider e disponibilità delle metriche sui veri account **non sono stati verificati live**.
+La policy dell’ambiente impediva al browser headless la navigazione diretta, anche verso localhost. Non è stata aggirata. Il test UI usa `page.set_content` e un mock fetch **interamente in memoria**, con fixture generate dallo schema dell’applicazione. Esegue i veri handler dei form e controlla le richieste prodotte, ma non è una prova browser end-to-end contro il server reale.
 
-I test social fanno fallire ogni chiamata non esplicitamente prevista nella fixture. Dimostrano che il codice prepara e interpreta i contratti testati, non che un'app sia autorizzata o che il provider non abbia cambiato comportamento. I test LLM producono dati controllati soltanto in `tests/`; il runtime non include un modello finto di riserva.
+Separatamente, i test Node e di installazione effettuano richieste HTTP reali al backend locale e verificano il database. Queste due categorie non vengono confuse. Gli screenshot sono del frontend eseguito, con utente e brand di collaudo; l’applicazione distribuita non precarica questi dati.
 
-La navigazione diretta del browser headless al server locale era bloccata dalla policy dell'ambiente. Non è stata aggirata: il controllo UI usa `page.set_content` con fetch sostituito da dati interamente in memoria, senza richieste browser inoltrate altrove. Le API HTTP sono verificate separatamente dal test Node reale. Quindi **non viene dichiarato un test browser end-to-end integrato contro il backend live**.
+## Confine provider / produzione
 
-Le schermate in `screenshots/` mostrano un brand e un utente di collaudo, non account commerciali collegati. Il prodotto distribuito si avvia vuoto. I JSON n8n sono stati parsati ma non eseguiti su n8n; Dockerfile/compose non sono stati costruiti/avviati qui. Il registry npm non era raggiungibile: sono stati usati il compilatore e i tipi disponibili nell'ambiente; il runtime compilato non richiede dipendenze npm.
+Nessun accesso a Google, Meta, TikTok, X, LinkedIn, YouTube o altri account reali durante i test; nessuna email o pubblicazione esterna; nessun modello a pagamento invocato. Le fixture verificano il codice e i contratti presi a riferimento, non l’app review, gli scope effettivamente disponibili all’operatore o le variazioni future delle API.
 
-## Riprodurre i test
+Dockerfile/Compose/Caddy sono inclusi e revisionati come configurazione, ma **Docker non era disponibile** per costruirli ed eseguirli. La matrice CI 22/24 è inclusa, non è stato eseguito un run remoto GitHub. DNS/TLS, deliverability, performance sotto carico, audit sicurezza e accessibilità completa non sono stati certificati.
 
-```bash
-npm install --ignore-scripts
-npm run typecheck
-npm test
-node --check web/app.js
-```
-
-Per le prove UI opzionali occorrono Python3, Playwright Python e Chromium installati nel proprio ambiente:
-
-```bash
-python tests/browser/visual.py
-# CHROMIUM_PATH può indicare un binario diverso da /usr/bin/chromium.
-# UI_TEST_OUT sceglie la directory risultati (default /tmp/air3-browser).
-```
-
-Per ripetere lo smoke della release, Python3 e Node/FFmpeg locali:
+## Riprodurre
 
 ```bash
-python tests/release/smoke.py
+npm ci --offline --ignore-scripts
+npm run check
+npm run test:ui
+npm run test:install
 ```
 
-Questo test crea una directory temporanea, genera credenziali locali temporanee, verifica HTTP e backup e poi rimuove l'ambiente. Non usa i dati runtime dell'installazione e non chiama provider social. Non avviarlo con un profilo di produzione modificato per attivare servizi esterni.
+UI: Python3, Playwright e Chromium già installati; `CHROMIUM_PATH` sceglie il binario, `UI_TEST_OUT` la cartella. Gli script non installano silenziosamente un browser.
 
-## Limiti ancora da verificare
+Per testare l’archivio finale in una directory temporanea, ricompilando offline:
 
-Import OAuth/manual token per ogni piattaforma, audit e requisiti UX TikTok, formati video specifici del creator, proprietà dei domini media, capienza dei contatori/filtri Postiz, stress test sui volumi di dati, restore con upload concorrenti, esposizione pubblica e backup operativi. La matrice [REQUIREMENTS](REQUIREMENTS.md) dichiara le parti parziali/future invece di attribuire completezza ai soli test.
+```bash
+AIR3_RELEASE_ZIP=/PERCORSO/AIR3-Social-Studio-v0.2.0.zip AIR3_SMOKE_COMPILE=1 npm run test:install
+```
+
+La verifica crea credenziali temporanee, avvia solo il backend locale senza worker, effettua chiamate HTTP, backup e restart, quindi pulisce l’ambiente. Non usa DATA_DIR o credenziali della tua installazione.
+
+Migrazione: estrai il vecchio ZIP in una cartella separata, poi:
+
+```bash
+AIR3_LEGACY_ROOT=/PERCORSO/vecchia-release/air3-social-studio node tests/release/migrate.mjs
+```
+
+Usa un database temporaneo. La CLI di promozione site admin è eseguita soltanto sul database di test.
+
+Per la verifica sul dominio e sugli account reali seguire [RELEASE-GATE](RELEASE-GATE.md), non impostare flag “audited” o stati “verified” soltanto perché questi test sono passati.

@@ -24,7 +24,12 @@ export class TikTokClient {
         assert(b.publish_id, 'TIKTOK_RESPONSE', 'publish_id TikTok mancante');
         return { state: 'PROCESSING', externalId: String(b.publish_id), details: { ticket: true } };
     }
-    async poll(c: Bag, r: Receipt): Promise<Receipt> { const b = await this.call(c, 'post/publish/status/fetch/', { publish_id: r.externalId }); if (b.status === 'PUBLISH_COMPLETE')
-        return { ...r, state: 'PUBLISHED', details: { ...r.details, publicPostIds: (b.publicaly_available_post_id ?? []).map(String) } }; if (b.status === 'FAILED')
-        return { ...r, state: 'FAILED', error: String(b.fail_reason || 'TikTok ha rifiutato il contenuto') }; return r; }
+    async poll(c: Bag, r: Receipt): Promise<Receipt> {
+        const b = await this.call(c, 'post/publish/status/fetch/', { publish_id: r.externalId });
+        if (b.status === 'PUBLISH_COMPLETE')
+            return { ...r, state: 'PUBLISHED', details: { ...r.details, publicPostIds: (b.publicaly_available_post_id ?? []).map(String) } };
+        if (b.status === 'FAILED')
+            return { ...r, state: 'FAILED', error: String(b.fail_reason || 'TikTok ha rifiutato il contenuto') };
+        return r;
+    }
 }

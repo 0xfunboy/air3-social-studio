@@ -1,7 +1,10 @@
 .env
+.env.*
 node_modules
-.git
 data
 backups
-tests
-artifacts
+.git
+*.zip
+REPOSITORY.bundle
+docs/screenshots
+*.log

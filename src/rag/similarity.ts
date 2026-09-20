@@ -20,7 +20,14 @@ export function cosineSimilarity(a: number[], b: number[]): number {
     return Number.isFinite(score) ? score : 0;
 }
 export function tokens(text: string): Set<string> { return new Set(text.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(t => t.length >= 3)); }
-export function jaccard(a: string, b: string): number { const ta = tokens(a), tb = tokens(b); if (!ta.size || !tb.size)
-    return 0; let inter = 0; for (const t of ta)
-    if (tb.has(t))
-        inter++; const union = ta.size + tb.size - inter; return union === 0 ? 0 : inter / union; }
+export function jaccard(a: string, b: string): number {
+    const ta = tokens(a), tb = tokens(b);
+    if (!ta.size || !tb.size)
+        return 0;
+    let inter = 0;
+    for (const t of ta)
+        if (tb.has(t))
+            inter++;
+    const union = ta.size + tb.size - inter;
+    return union === 0 ? 0 : inter / union;
+}

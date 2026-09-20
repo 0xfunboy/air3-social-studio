@@ -46,7 +46,7 @@ export class Embedder {
     async query(input) {
         if (!this.enabled)
             return [];
-        const key = sha(input);
+        const key = sha(this.model + "\0" + input);
         const found = this.cache.get(key);
         if (found)
             return found;

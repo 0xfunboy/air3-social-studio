@@ -1,396 +1,725 @@
 
-> air3-social-studio@0.1.0 test
+> air3-social-studio@0.2.0 check
+> npm run typecheck && npm test
+
+
+> air3-social-studio@0.2.0 typecheck
+> tsc -p tsconfig.json --noEmit
+
+
+> air3-social-studio@0.2.0 test
 > npm run build && node --test dist/tests/*.test.js
 
 
-> air3-social-studio@0.1.0 build
-> tsc -p tsconfig.json
+> air3-social-studio@0.2.0 build
+> tsc -p tsconfig.json && node scripts/check-web.mjs
 
+Browser modules: syntax and HTML entrypoint checks passed.
 TAP version 13
-# (node:2594) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (node:5548) ExperimentalWarning: SQLite is an experimental feature and might change at any time
 # (Use `node --trace-warnings ...` to show where the warning was created)
 # Subtest: AES-GCM binds ciphertext to workspace, brand and account
 ok 1 - AES-GCM binds ciphertext to workspace, brand and account
   ---
-  duration_ms: 5.695873
+  duration_ms: 3.335823
   type: 'test'
   ...
 # Subtest: scrypt validates only the correct password
 ok 2 - scrypt validates only the correct password
   ---
-  duration_ms: 309.533657
+  duration_ms: 132.151896
   type: 'test'
   ...
 # Subtest: reused GoonersBot similarity primitives handle edge cases
 ok 3 - reused GoonersBot similarity primitives handle edge cases
   ---
-  duration_ms: 2.880355
+  duration_ms: 0.907426
   type: 'test'
   ...
 # Subtest: chunker bounds, overlap and newline splitting
 ok 4 - chunker bounds, overlap and newline splitting
   ---
-  duration_ms: 0.800919
+  duration_ms: 0.28558
   type: 'test'
   ...
 # Subtest: strict model schemas reject extra properties, wrong types and unbounded scores
 ok 5 - strict model schemas reject extra properties, wrong types and unbounded scores
   ---
-  duration_ms: 1.053773
+  duration_ms: 0.368352
   type: 'test'
   ...
 # Subtest: platform catalog covers requested channels and refuses silent media loss
 ok 6 - platform catalog covers requested channels and refuses silent media loss
   ---
-  duration_ms: 0.917991
+  duration_ms: 0.504994
   type: 'test'
   ...
 # Subtest: account ciphertext never appears in public representation; scoped decrypt works
 ok 7 - account ciphertext never appears in public representation; scoped decrypt works
   ---
-  duration_ms: 117.681287
+  duration_ms: 61.404623
   type: 'test'
   ...
 # Subtest: brand-scoped entities cannot be accessed through another brand or workspace
 ok 8 - brand-scoped entities cannot be accessed through another brand or workspace
   ---
-  duration_ms: 76.591032
+  duration_ms: 42.075373
   type: 'test'
   ...
 # Subtest: optimistic content revisions reject stale edits
 ok 9 - optimistic content revisions reject stale edits
   ---
-  duration_ms: 62.956906
+  duration_ms: 39.083801
   type: 'test'
   ...
 # Subtest: machine tokens cannot approve, grant their own approval, or create admin tokens
 ok 10 - machine tokens cannot approve, grant their own approval, or create admin tokens
   ---
-  duration_ms: 59.622784
+  duration_ms: 37.887945
   type: 'test'
   ...
 # Subtest: mandatory brand rules cannot be overridden by a high reviewer score
 ok 11 - mandatory brand rules cannot be overridden by a high reviewer score
   ---
-  duration_ms: 66.616263
+  duration_ms: 39.588831
   type: 'test'
   ...
 # Subtest: editing approved content invalidates approval and changing brand invalidates signature
 ok 12 - editing approved content invalidates approval and changing brand invalidates signature
   ---
-  duration_ms: 73.844937
+  duration_ms: 40.978156
   type: 'test'
   ...
 # Subtest: scheduling is durable and cancellation removes queued publication
 ok 13 - scheduling is durable and cancellation removes queued publication
   ---
-  duration_ms: 62.549222
+  duration_ms: 39.264202
   type: 'test'
   ...
 # Subtest: one worker publish yields one provider call and schedules 24h/72h observations
 ok 14 - one worker publish yields one provider call and schedules 24h/72h observations
   ---
-  duration_ms: 104.221365
+  duration_ms: 53.944504
   type: 'test'
   ...
 # Subtest: ambiguous provider failure is UNCERTAIN and is never blindly retried
 ok 15 - ambiguous provider failure is UNCERTAIN and is never blindly retried
   ---
-  duration_ms: 81.087511
+  duration_ms: 50.457513
   type: 'test'
   ...
 # Subtest: a definite 429 is queued with backoff, not marked as successfully published
 ok 16 - a definite 429 is queued with backoff, not marked as successfully published
   ---
-  duration_ms: 87.588467
+  duration_ms: 47.835347
   type: 'test'
   ...
 # Subtest: expired write leases require reconciliation, read leases are safe to reclaim
 ok 17 - expired write leases require reconciliation, read leases are safe to reclaim
   ---
-  duration_ms: 62.493594
+  duration_ms: 40.707088
   type: 'test'
   ...
 # Subtest: RAG filters approval, scope, role, platform and expiry; repeated input is deduplicated
 ok 18 - RAG filters approval, scope, role, platform and expiry; repeated input is deduplicated
   ---
-  duration_ms: 61.578824
+  duration_ms: 43.520211
   type: 'test'
   ...
 # Subtest: knowledge changes invalidate an existing publication approval
 ok 19 - knowledge changes invalidate an existing publication approval
   ---
-  duration_ms: 59.924659
+  duration_ms: 47.697499
   type: 'test'
   ...
 # Subtest: MCP negotiates protocol, enforces tool schemas and never exposes an approve tool
 ok 20 - MCP negotiates protocol, enforces tool schemas and never exposes an approve tool
   ---
-  duration_ms: 64.082058
+  duration_ms: 40.129677
   type: 'test'
   ...
 # Subtest: fixture AI pipeline records role-specific calls and stops at human approval
 ok 21 - fixture AI pipeline records role-specific calls and stops at human approval
   ---
-  duration_ms: 65.452771
+  duration_ms: 40.140513
   type: 'test'
   ...
 # Subtest: analyst uses real snapshot IDs and separate latest observation per post
 ok 22 - analyst uses real snapshot IDs and separate latest observation per post
   ---
-  duration_ms: 78.22913
+  duration_ms: 39.596962
   type: 'test'
   ...
-# (node:2595) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (node:5549) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: Installation configuration defaults match the actual runtime and secrets never appear in read responses
+ok 23 - Installation configuration defaults match the actual runtime and secrets never appear in read responses
+  ---
+  duration_ms: 76.136191
+  type: 'test'
+  ...
+# Subtest: Host configuration rejects tenant admin, token access, unknown variables and env injection
+ok 24 - Host configuration rejects tenant admin, token access, unknown variables and env injection
+  ---
+  duration_ms: 97.256569
+  type: 'test'
+  ...
+# Subtest: Secret clearing is explicit, restart fields are staged, and incomplete public registration is rejected
+ok 25 - Secret clearing is explicit, restart fields are staged, and incomplete public registration is rejected
+  ---
+  duration_ms: 42.265062
+  type: 'test'
+  ...
+# Subtest: Embedding query cache is invalidated by embedding-space change
+ok 26 - Embedding query cache is invalidated by embedding-space change
+  ---
+  duration_ms: 40.43705
+  type: 'test'
+  ...
+# Subtest: Public registration verifies email before sessions and never grants site administrator
+ok 27 - Public registration verifies email before sessions and never grants site administrator
+  ---
+  duration_ms: 82.605809
+  type: 'test'
+  ...
+# Subtest: Password reset is one-time, invalidates sessions and does not re-enable disabled users
+ok 28 - Password reset is one-time, invalidates sessions and does not re-enable disabled users
+  ---
+  duration_ms: 156.855337
+  type: 'test'
+  ...
+# Subtest: Invitation cannot change an existing user password and preserves token after failed verification
+ok 29 - Invitation cannot change an existing user password and preserves token after failed verification
+  ---
+  duration_ms: 197.576084
+  type: 'test'
+  ...
+# Subtest: New invited user receives only the invited membership and never installation control
+ok 30 - New invited user receives only the invited membership and never installation control
+  ---
+  duration_ms: 74.741687
+  type: 'test'
+  ...
+# Subtest: Google identity signature, issuer, audience and nonce are cryptographically verified
+ok 31 - Google identity signature, issuer, audience and nonce are cryptographically verified
+  ---
+  duration_ms: 2.475296
+  type: 'test'
+  ...
+# Subtest: Google ID token rejects issuer
+ok 32 - Google ID token rejects issuer
+  ---
+  duration_ms: 0.608216
+  type: 'test'
+  ...
+# Subtest: Google ID token rejects audience
+ok 33 - Google ID token rejects audience
+  ---
+  duration_ms: 0.470303
+  type: 'test'
+  ...
+# Subtest: Google ID token rejects nonce
+ok 34 - Google ID token rejects nonce
+  ---
+  duration_ms: 0.419518
+  type: 'test'
+  ...
+# Subtest: Google ID token rejects expired
+ok 35 - Google ID token rejects expired
+  ---
+  duration_ms: 0.436683
+  type: 'test'
+  ...
+# Subtest: Google ID token rejects unverified
+ok 36 - Google ID token rejects unverified
+  ---
+  duration_ms: 0.459156
+  type: 'test'
+  ...
+# Subtest: Google ID token rejects future
+ok 37 - Google ID token rejects future
+  ---
+  duration_ms: 0.515379
+  type: 'test'
+  ...
+# Subtest: Google ID token rejects presenter
+ok 38 - Google ID token rejects presenter
+  ---
+  duration_ms: 0.554196
+  type: 'test'
+  ...
+# Subtest: Google ID token rejects subject
+ok 39 - Google ID token rejects subject
+  ---
+  duration_ms: 0.484483
+  type: 'test'
+  ...
+# Subtest: Google rejects unsigned and unsupported algorithms
+ok 40 - Google rejects unsigned and unsupported algorithms
+  ---
+  duration_ms: 0.398598
+  type: 'test'
+  ...
+# Subtest: Google matching email never silently links an existing password account
+ok 41 - Google matching email never silently links an existing password account
+  ---
+  duration_ms: 44.618137
+  type: 'test'
+  ...
+# Subtest: Google explicit linking binds current user, validates ID token, rotates session and consumes state
+ok 42 - Google explicit linking binds current user, validates ID token, rotates session and consumes state
+  ---
+  duration_ms: 38.503341
+  type: 'test'
+  ...
+# Subtest: Google OAuth rejects missing browser binding before exchanging the code
+ok 43 - Google OAuth rejects missing browser binding before exchanging the code
+  ---
+  duration_ms: 37.658397
+  type: 'test'
+  ...
+# Subtest: OAuth authorization state is random, encrypted, browser-bound, PKCE-protected and app-scoped
+ok 44 - OAuth authorization state is random, encrypted, browser-bound, PKCE-protected and app-scoped
+  ---
+  duration_ms: 37.93212
+  type: 'test'
+  ...
+# Subtest: OAuth callback stages discovered accounts; only explicit selected destinations become accounts
+ok 45 - OAuth callback stages discovered accounts; only explicit selected destinations become accounts
+  ---
+  duration_ms: 40.832051
+  type: 'test'
+  ...
+# Subtest: OAuth callback refuses revoked membership before token exchange
+ok 46 - OAuth callback refuses revoked membership before token exchange
+  ---
+  duration_ms: 45.86151
+  type: 'test'
+  ...
+# Subtest: OAuth callback refuses changed app configuration and partial scopes
+ok 47 - OAuth callback refuses changed app configuration and partial scopes
+  ---
+  duration_ms: 43.466802
+  type: 'test'
+  ...
+# Subtest: Staged grant cannot cross user or workspace boundaries
+ok 48 - Staged grant cannot cross user or workspace boundaries
+  ---
+  duration_ms: 38.565493
+  type: 'test'
+  ...
+# Subtest: One refresh rotates every destination in the same grant without invalidating editorial revisions
+ok 49 - One refresh rotates every destination in the same grant without invalidating editorial revisions
+  ---
+  duration_ms: 48.015602
+  type: 'test'
+  ...
+# Subtest: Refresh failure surfaces reconnect state, not a fake successful connection or signed-out session
+ok 50 - Refresh failure surfaces reconnect state, not a fake successful connection or signed-out session
+  ---
+  duration_ms: 37.040867
+  type: 'test'
+  ...
+# Subtest: Disabling an OAuth app blocks use even when the saved access token has not expired
+ok 51 - Disabling an OAuth app blocks use even when the saved access token has not expired
+  ---
+  duration_ms: 37.425474
+  type: 'test'
+  ...
+# Subtest: Disconnect removes local tokens, increments revision and retains published history
+ok 52 - Disconnect removes local tokens, increments revision and retains published history
+  ---
+  duration_ms: 36.511838
+  type: 'test'
+  ...
+# Subtest: x OAuth exchange and destination discovery follow the registered provider contract
+ok 53 - x OAuth exchange and destination discovery follow the registered provider contract
+  ---
+  duration_ms: 38.343857
+  type: 'test'
+  ...
+# Subtest: tiktok OAuth exchange and destination discovery follow the registered provider contract
+ok 54 - tiktok OAuth exchange and destination discovery follow the registered provider contract
+  ---
+  duration_ms: 37.016412
+  type: 'test'
+  ...
+# Subtest: linkedin OAuth exchange and destination discovery follow the registered provider contract
+ok 55 - linkedin OAuth exchange and destination discovery follow the registered provider contract
+  ---
+  duration_ms: 41.963828
+  type: 'test'
+  ...
+# Subtest: youtube OAuth exchange and destination discovery follow the registered provider contract
+ok 56 - youtube OAuth exchange and destination discovery follow the registered provider contract
+  ---
+  duration_ms: 38.460849
+  type: 'test'
+  ...
+# Subtest: pinterest OAuth exchange and destination discovery follow the registered provider contract
+ok 57 - pinterest OAuth exchange and destination discovery follow the registered provider contract
+  ---
+  duration_ms: 39.655849
+  type: 'test'
+  ...
+# Subtest: twitch OAuth exchange and destination discovery follow the registered provider contract
+ok 58 - twitch OAuth exchange and destination discovery follow the registered provider contract
+  ---
+  duration_ms: 40.30134
+  type: 'test'
+  ...
+# Subtest: slack OAuth exchange and destination discovery follow the registered provider contract
+ok 59 - slack OAuth exchange and destination discovery follow the registered provider contract
+  ---
+  duration_ms: 39.202911
+  type: 'test'
+  ...
+# Subtest: Threads short-lived token is exchanged before account selection; renewal requires a still-valid token
+ok 60 - Threads short-lived token is exchanged before account selection; renewal requires a still-valid token
+  ---
+  duration_ms: 38.405067
+  type: 'test'
+  ...
+# Subtest: Meta OAuth discovers linked Instagram accounts with exact Page token and account type
+ok 61 - Meta OAuth discovers linked Instagram accounts with exact Page token and account type
+  ---
+  duration_ms: 42.351194
+  type: 'test'
+  ...
+# Subtest: Telegram guided connection verifies administrator publishing permission without sending a message
+ok 62 - Telegram guided connection verifies administrator publishing permission without sending a message
+  ---
+  duration_ms: 44.184649
+  type: 'test'
+  ...
+# Subtest: Telegram signed events cannot inject a different chat into a brand inbox
+ok 63 - Telegram signed events cannot inject a different chat into a brand inbox
+  ---
+  duration_ms: 41.084153
+  type: 'test'
+  ...
+# Subtest: Shared Meta webhook verifies the app signature and isolates exact phone IDs across brands
+ok 64 - Shared Meta webhook verifies the app signature and isolates exact phone IDs across brands
+  ---
+  duration_ms: 40.507123
+  type: 'test'
+  ...
+# Subtest: YouTube local MP4 upload uses pinned resumable endpoint, checks processing and collects actual metrics
+ok 65 - YouTube local MP4 upload uses pinned resumable endpoint, checks processing and collects actual metrics
+  ---
+  duration_ms: 43.914131
+  type: 'test'
+  ...
+# Subtest: Real HTTP frontend routes, CSP, setup persistence and recent-auth administrative boundary
+ok 66 - Real HTTP frontend routes, CSP, setup persistence and recent-auth administrative boundary
+  ---
+  duration_ms: 233.014236
+  type: 'test'
+  ...
+# Subtest: Proxy headers never override the socket address unless the immediate peer is explicitly trusted
+ok 67 - Proxy headers never override the socket address unless the immediate peer is explicitly trusted
+  ---
+  duration_ms: 0.185573
+  type: 'test'
+  ...
+# Subtest: Installation OAuth apps are inherited without copying secrets into a workspace override
+ok 68 - Installation OAuth apps are inherited without copying secrets into a workspace override
+  ---
+  duration_ms: 73.451637
+  type: 'test'
+  ...
+# Subtest: OAuth using a shared app stores its scope and rejects a replaced config before selecting destinations
+ok 69 - OAuth using a shared app stores its scope and rejects a replaced config before selecting destinations
+  ---
+  duration_ms: 39.234058
+  type: 'test'
+  ...
+# Subtest: Shared Meta callback verifies the installation secret and isolates targets across workspaces
+ok 70 - Shared Meta callback verifies the installation secret and isolates targets across workspaces
+  ---
+  duration_ms: 74.427383
+  type: 'test'
+  ...
+# Subtest: reddit OAuth authenticates and discovers only concrete destinations
+ok 71 - reddit OAuth authenticates and discovers only concrete destinations
+  ---
+  duration_ms: 36.705433
+  type: 'test'
+  ...
+# Subtest: discord OAuth authenticates and discovers only concrete destinations
+ok 72 - discord OAuth authenticates and discovers only concrete destinations
+  ---
+  duration_ms: 37.312838
+  type: 'test'
+  ...
+# Subtest: mastodon OAuth authenticates and discovers only concrete destinations
+ok 73 - mastodon OAuth authenticates and discovers only concrete destinations
+  ---
+  duration_ms: 36.875644
+  type: 'test'
+  ...
+# Subtest: WhatsApp OAuth resolves owned WABA phone number IDs instead of treating numbers as targets
+ok 74 - WhatsApp OAuth resolves owned WABA phone number IDs instead of treating numbers as targets
+  ---
+  duration_ms: 41.293321
+  type: 'test'
+  ...
+# Subtest: LinkedIn Page OAuth discovers only organizations returned by the approved admin ACL request
+ok 75 - LinkedIn Page OAuth discovers only organizations returned by the approved admin ACL request
+  ---
+  duration_ms: 38.347944
+  type: 'test'
+  ...
+# (node:5550) ExperimentalWarning: SQLite is an experimental feature and might change at any time
 # (Use `node --trace-warnings ...` to show where the warning was created)
 # Subtest: Real HTTP session lifecycle, CSRF, tenant-scoped machine token and revocation
-ok 23 - Real HTTP session lifecycle, CSRF, tenant-scoped machine token and revocation
+ok 76 - Real HTTP session lifecycle, CSRF, tenant-scoped machine token and revocation
   ---
-  duration_ms: 427.796181
+  duration_ms: 165.390243
   type: 'test'
   ...
 # Subtest: Last admin cannot self-demote; passwords are never returned from member list
-ok 24 - Last admin cannot self-demote; passwords are never returned from member list
+ok 77 - Last admin cannot self-demote; passwords are never returned from member list
   ---
-  duration_ms: 109.383718
+  duration_ms: 78.625938
   type: 'test'
   ...
 # Subtest: WhatsApp webhook signature, target binding, replay deduplication and verified 24h window
-ok 25 - WhatsApp webhook signature, target binding, replay deduplication and verified 24h window
+ok 78 - WhatsApp webhook signature, target binding, replay deduplication and verified 24h window
   ---
-  duration_ms: 60.567776
+  duration_ms: 43.838454
   type: 'test'
   ...
 # Subtest: WhatsApp delivery webhook resolves accepted message exactly once and cannot downgrade read
-ok 26 - WhatsApp delivery webhook resolves accepted message exactly once and cannot downgrade read
+ok 79 - WhatsApp delivery webhook resolves accepted message exactly once and cannot downgrade read
   ---
-  duration_ms: 58.846492
+  duration_ms: 54.59701
   type: 'test'
   ...
 # Subtest: Telegram callback approval requires signed webhook, exact chat and current human membership
-ok 27 - Telegram callback approval requires signed webhook, exact chat and current human membership
+ok 80 - Telegram callback approval requires signed webhook, exact chat and current human membership
   ---
-  duration_ms: 65.074477
+  duration_ms: 40.490188
   type: 'test'
   ...
 # Subtest: Embeddings validate index correspondence, model namespace, dimensions and lexical fallback
-ok 28 - Embeddings validate index correspondence, model namespace, dimensions and lexical fallback
+ok 81 - Embeddings validate index correspondence, model namespace, dimensions and lexical fallback
   ---
-  duration_ms: 58.446207
+  duration_ms: 38.267854
   type: 'test'
   ...
 # Subtest: Network blocks arbitrary URLs and credentials in URLs before fetch
-ok 29 - Network blocks arbitrary URLs and credentials in URLs before fetch
+ok 82 - Network blocks arbitrary URLs and credentials in URLs before fetch
   ---
-  duration_ms: 0.97956
+  duration_ms: 0.452636
   type: 'test'
   ...
 # Subtest: Campaign edits invalidate approval; plan conversion is atomic on invalid account
-ok 30 - Campaign edits invalidate approval; plan conversion is atomic on invalid account
+ok 83 - Campaign edits invalidate approval; plan conversion is atomic on invalid account
   ---
-  duration_ms: 94.862002
+  duration_ms: 41.001471
   type: 'test'
   ...
 # Subtest: Real FFmpeg JPEG rendering, signed media access, scoped assets and MP4 slideshow
-ok 31 - Real FFmpeg JPEG rendering, signed media access, scoped assets and MP4 slideshow
+ok 84 - Real FFmpeg JPEG rendering, signed media access, scoped assets and MP4 slideshow
   ---
-  duration_ms: 1555.964222
+  duration_ms: 412.101813
   type: 'test'
   ...
 # Subtest: Template fits text vertically or rejects overflow instead of overlapping title and body
-ok 32 - Template fits text vertically or rejects overflow instead of overlapping title and body
+ok 85 - Template fits text vertically or rejects overflow instead of overlapping title and body
   ---
-  duration_ms: 7.559856
+  duration_ms: 0.717387
   type: 'test'
   ...
-# (node:2596) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (node:5609) ExperimentalWarning: SQLite is an experimental feature and might change at any time
 # (Use `node --trace-warnings ...` to show where the warning was created)
 # Subtest: HTTP contract, not live: telegram text publishing
-ok 33 - HTTP contract, not live: telegram text publishing
+ok 86 - HTTP contract, not live: telegram text publishing
   ---
-  duration_ms: 244.603143
+  duration_ms: 82.507926
   type: 'test'
   ...
 # Subtest: HTTP contract, not live: facebook text publishing
-ok 34 - HTTP contract, not live: facebook text publishing
+ok 87 - HTTP contract, not live: facebook text publishing
   ---
-  duration_ms: 122.107654
+  duration_ms: 42.198104
   type: 'test'
   ...
 # Subtest: HTTP contract, not live: x text publishing
-ok 35 - HTTP contract, not live: x text publishing
+ok 88 - HTTP contract, not live: x text publishing
   ---
-  duration_ms: 63.235184
+  duration_ms: 39.984843
   type: 'test'
   ...
 # Subtest: HTTP contract, not live: linkedin text publishing
-ok 36 - HTTP contract, not live: linkedin text publishing
+ok 89 - HTTP contract, not live: linkedin text publishing
   ---
-  duration_ms: 66.744052
+  duration_ms: 37.32736
   type: 'test'
   ...
 # Subtest: HTTP contract, not live: linkedin-page text publishing
-ok 37 - HTTP contract, not live: linkedin-page text publishing
+ok 90 - HTTP contract, not live: linkedin-page text publishing
   ---
-  duration_ms: 60.350752
+  duration_ms: 37.332136
   type: 'test'
   ...
 # Subtest: HTTP contract, not live: discord text publishing
-ok 38 - HTTP contract, not live: discord text publishing
+ok 91 - HTTP contract, not live: discord text publishing
   ---
-  duration_ms: 60.044112
+  duration_ms: 36.426382
   type: 'test'
   ...
 # Subtest: HTTP contract, not live: slack text publishing
-ok 39 - HTTP contract, not live: slack text publishing
+ok 92 - HTTP contract, not live: slack text publishing
   ---
-  duration_ms: 57.311045
+  duration_ms: 36.342929
   type: 'test'
   ...
 # Subtest: HTTP contract, not live: reddit text publishing
-ok 40 - HTTP contract, not live: reddit text publishing
+ok 93 - HTTP contract, not live: reddit text publishing
   ---
-  duration_ms: 55.627454
+  duration_ms: 36.612837
   type: 'test'
   ...
 # Subtest: HTTP contract, not live: mastodon text publishing
-ok 41 - HTTP contract, not live: mastodon text publishing
+ok 94 - HTTP contract, not live: mastodon text publishing
   ---
-  duration_ms: 59.022597
+  duration_ms: 36.844558
   type: 'test'
   ...
 # Subtest: HTTP contract, not live: bluesky text publishing
-ok 42 - HTTP contract, not live: bluesky text publishing
+ok 95 - HTTP contract, not live: bluesky text publishing
   ---
-  duration_ms: 58.554595
+  duration_ms: 38.175348
   type: 'test'
   ...
 # Subtest: HTTP contract, not live: farcaster text publishing
-ok 43 - HTTP contract, not live: farcaster text publishing
+ok 96 - HTTP contract, not live: farcaster text publishing
   ---
-  duration_ms: 77.098547
+  duration_ms: 36.344882
   type: 'test'
   ...
 # Subtest: HTTP contract, not live: twitch text publishing
-ok 44 - HTTP contract, not live: twitch text publishing
+ok 97 - HTTP contract, not live: twitch text publishing
   ---
-  duration_ms: 71.148138
+  duration_ms: 37.553432
   type: 'test'
   ...
 # Subtest: Telegram album sends exactly one caption and preserves all returned IDs
-ok 45 - Telegram album sends exactly one caption and preserves all returned IDs
+ok 98 - Telegram album sends exactly one caption and preserves all returned IDs
   ---
-  duration_ms: 56.161794
+  duration_ms: 36.453772
   type: 'test'
   ...
 # Subtest: Pinterest native image and board contract
-ok 46 - Pinterest native image and board contract
+ok 99 - Pinterest native image and board contract
   ---
-  duration_ms: 62.440643
+  duration_ms: 36.575973
   type: 'test'
   ...
 # Subtest: instagram: container creation, pure GET readiness, separate final publication
-ok 47 - instagram: container creation, pure GET readiness, separate final publication
+ok 100 - instagram: container creation, pure GET readiness, separate final publication
   ---
-  duration_ms: 59.565402
+  duration_ms: 36.138338
   type: 'test'
   ...
 # Subtest: threads: container creation, pure GET readiness, separate final publication
-ok 48 - threads: container creation, pure GET readiness, separate final publication
+ok 101 - threads: container creation, pure GET readiness, separate final publication
   ---
-  duration_ms: 65.669489
+  duration_ms: 37.112633
   type: 'test'
   ...
 # Subtest: Instagram carousel children are image containers, final parent carries caption
-ok 49 - Instagram carousel children are image containers, final parent carries caption
+ok 102 - Instagram carousel children are image containers, final parent carries caption
   ---
-  duration_ms: 67.61371
+  duration_ms: 37.924899
   type: 'test'
   ...
 # Subtest: Facebook video remains PROCESSING until video_status ready
-ok 50 - Facebook video remains PROCESSING until video_status ready
+ok 103 - Facebook video remains PROCESSING until video_status ready
   ---
-  duration_ms: 60.152998
+  duration_ms: 36.139229
   type: 'test'
   ...
 # Subtest: messenger: reply routes recipient without inventing delivery receipt
-ok 51 - messenger: reply routes recipient without inventing delivery receipt
+ok 104 - messenger: reply routes recipient without inventing delivery receipt
   ---
-  duration_ms: 121.275502
+  duration_ms: 38.831084
   type: 'test'
   ...
 # Subtest: instagram-dm: reply routes recipient without inventing delivery receipt
-ok 52 - instagram-dm: reply routes recipient without inventing delivery receipt
+ok 105 - instagram-dm: reply routes recipient without inventing delivery receipt
   ---
-  duration_ms: 69.983205
+  duration_ms: 36.722438
   type: 'test'
   ...
 # Subtest: WhatsApp template accepted receipt is PROCESSING, never delivery success
-ok 53 - WhatsApp template accepted receipt is PROCESSING, never delivery success
+ok 106 - WhatsApp template accepted receipt is PROCESSING, never delivery success
   ---
-  duration_ms: 63.141136
+  duration_ms: 36.747686
   type: 'test'
   ...
 # Subtest: TikTok video creator permissions -> init ticket -> authoritative status
-ok 54 - TikTok video creator permissions -> init ticket -> authoritative status
+ok 107 - TikTok video creator permissions -> init ticket -> authoritative status
   ---
-  duration_ms: 60.311597
+  duration_ms: 40.501795
   type: 'test'
   ...
 # Subtest: TikTok unaudited public post is refused before publish init
-ok 55 - TikTok unaudited public post is refused before publish init
+ok 108 - TikTok unaudited public post is refused before publish init
   ---
-  duration_ms: 58.45923
+  duration_ms: 39.277902
   type: 'test'
   ...
 # Subtest: TikTok photo DIRECT_POST contract, explicit privacy and commercial flags
-ok 56 - TikTok photo DIRECT_POST contract, explicit privacy and commercial flags
+ok 109 - TikTok photo DIRECT_POST contract, explicit privacy and commercial flags
   ---
-  duration_ms: 60.270757
+  duration_ms: 46.724871
   type: 'test'
   ...
 # Subtest: Postiz youtube: upload, provider contract and monitored publication
-ok 57 - Postiz youtube: upload, provider contract and monitored publication
+ok 110 - Postiz youtube: upload, provider contract and monitored publication
   ---
-  duration_ms: 64.368889
+  duration_ms: 38.780871
   type: 'test'
   ...
 # Subtest: Postiz linkedin: upload, provider contract and monitored publication
-ok 58 - Postiz linkedin: upload, provider contract and monitored publication
+ok 111 - Postiz linkedin: upload, provider contract and monitored publication
   ---
-  duration_ms: 61.014186
+  duration_ms: 37.428458
   type: 'test'
   ...
 # Subtest: Postiz x: upload, provider contract and monitored publication
-ok 59 - Postiz x: upload, provider contract and monitored publication
+ok 112 - Postiz x: upload, provider contract and monitored publication
   ---
-  duration_ms: 61.904363
+  duration_ms: 38.67196
   type: 'test'
   ...
 # Subtest: Postiz analytics uses latest snapshot, not a false sum of cumulative totals
-ok 60 - Postiz analytics uses latest snapshot, not a false sum of cumulative totals
+ok 113 - Postiz analytics uses latest snapshot, not a false sum of cumulative totals
   ---
-  duration_ms: 74.650397
+  duration_ms: 37.644517
   type: 'test'
   ...
 # Subtest: Unsupported native metrics do not return invented zero values
-ok 61 - Unsupported native metrics do not return invented zero values
+ok 114 - Unsupported native metrics do not return invented zero values
   ---
-  duration_ms: 64.742837
+  duration_ms: 37.379326
   type: 'test'
   ...
 # Subtest: Disabled integrations and unsupported format fail before the first external call
-ok 62 - Disabled integrations and unsupported format fail before the first external call
+ok 115 - Disabled integrations and unsupported format fail before the first external call
   ---
-  duration_ms: 73.799395
+  duration_ms: 37.346678
   type: 'test'
   ...
-1..62
-# tests 62
+1..115
+# tests 115
 # suites 0
-# pass 62
+# pass 115
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 2855.223206
+# duration_ms 2667.05794

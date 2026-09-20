@@ -25,3 +25,7 @@ Specifica originale integrale in `docs/source/SMM_AI_architettura.md`.
 Licenza corrente GoonersBot e avviso precedente MIT in `licenses/`. Le autorizzazioni precedenti e di terzi restano valide secondo il loro ambito; il solo fatto che un repository appartenga a 0xfunboy non consente di riattribuire il copyright di terzi.
 
 Nessun asset grafico, modello, font o logo di una piattaforma è stato copiato dai repository donatori. Le sigle dei canali nella dashboard sono testo, non un kit di loghi ufficiali.
+
+## Release 0.2.0
+
+Interfaccia Paper & Graphite, SVG originali, identità Google, inviti/email/reset, app OAuth condivise e override, discovery/refresh, YouTube nativo, configurazione, installer, proxy e test aggiuntivi sono implementazioni nuove di questo progetto. I mockup forniti dall’utente sono riferimento di design, non runtime o prova di funzionalità. Nessun account, segreto o dato di una community dei repository sorgenti è stato copiato. Le primitive originarie conservano le attribuzioni elencate sopra.

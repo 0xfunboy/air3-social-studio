@@ -23,13 +23,21 @@ export interface Asset {
     alt: string;
 }
 const extensions: Record<string, string> = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/webp': '.webp', 'video/mp4': '.mp4', 'audio/mpeg': '.mp3', 'audio/wav': '.wav' };
-export function sniff(buffer: Buffer, mime: string): boolean { if (mime === 'image/png')
-    return buffer.subarray(0, 8).equals(Buffer.from('89504e470d0a1a0a', 'hex')); if (mime === 'image/jpeg')
-    return buffer[0] === 255 && buffer[1] === 216 && buffer[2] === 255; if (mime === 'image/webp')
-    return buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP'; if (mime === 'video/mp4')
-    return buffer.toString('ascii', 4, 8) === 'ftyp'; if (mime === 'audio/wav')
-    return buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WAVE'; if (mime === 'audio/mpeg')
-    return buffer.toString('ascii', 0, 3) === 'ID3' || (buffer[0] === 255 && ((buffer[1] ?? 0) & 224) === 224); return false; }
+export function sniff(buffer: Buffer, mime: string): boolean {
+    if (mime === 'image/png')
+        return buffer.subarray(0, 8).equals(Buffer.from('89504e470d0a1a0a', 'hex'));
+    if (mime === 'image/jpeg')
+        return buffer[0] === 255 && buffer[1] === 216 && buffer[2] === 255;
+    if (mime === 'image/webp')
+        return buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP';
+    if (mime === 'video/mp4')
+        return buffer.toString('ascii', 4, 8) === 'ftyp';
+    if (mime === 'audio/wav')
+        return buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WAVE';
+    if (mime === 'audio/mpeg')
+        return buffer.toString('ascii', 0, 3) === 'ID3' || (buffer[0] === 255 && ((buffer[1] ?? 0) & 224) === 224);
+    return false;
+}
 export class MediaService {
     readonly directory: string;
     constructor(private store: Store, private cfg: Config, private http: Http) { this.directory = join(cfg.dataDir, 'assets'); }
@@ -64,12 +72,18 @@ export class MediaService {
         path: string;
         asset: Entity<Asset>;
     } { const workspaceId = q.get('w') ?? '', brandId = q.get('b') ?? '', expires = Number(q.get('e')); assert(Number.isInteger(expires) && expires >= Date.now() / 1000 && expires <= Date.now() / 1000 + 604800, 'MEDIA_EXPIRED', 'Link media scaduto', 403); assert(equal(q.get('s') ?? '', hmac(`${workspaceId}:${brandId}:${assetId}:${expires}`, this.cfg.masterKey)), 'MEDIA_SIGNATURE', 'Link media non valido', 403); const asset = this.store.get<Asset>({ workspaceId, brandId }, assetId, 'asset'); return { path: join(this.directory, asset.data.file), asset }; }
-    async hydrate(p: Principal, media: Media[]): Promise<Media[]> { return media.map(m => { if (!m.id) {
-        assert(m.url && /^https:\/\//.test(m.url), 'MEDIA_URL', 'URL media HTTPS richiesta');
-        const u = new URL(m.url);
-        assert(!u.username && !u.password && !['localhost', '127.0.0.1', '::1'].includes(u.hostname), 'MEDIA_URL', 'URL media non valida');
-        return m;
-    } const a = this.asset(p, m.id); return { id: m.id, url: this.url(p, m.id), mime: a.data.mime, alt: m.alt ?? a.data.alt, name: a.data.name }; }); }
+    async hydrate(p: Principal, media: Media[]): Promise<Media[]> {
+        return media.map(m => {
+            if (!m.id) {
+                assert(m.url && /^https:\/\//.test(m.url), 'MEDIA_URL', 'URL media HTTPS richiesta');
+                const u = new URL(m.url);
+                assert(!u.username && !u.password && !['localhost', '127.0.0.1', '::1'].includes(u.hostname), 'MEDIA_URL', 'URL media non valida');
+                return m;
+            }
+            const a = this.asset(p, m.id);
+            return { id: m.id, url: this.url(p, m.id), mime: a.data.mime, alt: m.alt ?? a.data.alt, name: a.data.name };
+        });
+    }
     async generateBackground(p: Principal, brandId: string, prompt: string, references: Media[] = []): Promise<Entity<Asset>> {
         assert(this.cfg.imageModel && this.cfg.geminiKey, 'IMAGE_MODEL', 'Configurare GEMINI_IMAGE_MODEL e GEMINI_API_KEY.');
         const parts: Bag[] = [{ text: prompt + '\nNo text, no logos, no watermarks.' }];
@@ -143,32 +157,42 @@ export class MediaService {
             await rm(work, { recursive: true, force: true });
         }
     }
-    async health(): Promise<Bag> { try {
-        const { stdout } = await exec(this.cfg.ffmpeg, ['-version'], { timeout: 5000 });
-        await stat(this.cfg.font);
-        return { ffmpeg: true, font: true, version: stdout.split('\n')[0] };
+    async health(): Promise<Bag> {
+        try {
+            const { stdout } = await exec(this.cfg.ffmpeg, ['-version'], { timeout: 5000 });
+            await stat(this.cfg.font);
+            return { ffmpeg: true, font: true, version: stdout.split('\n')[0] };
+        }
+        catch {
+            return { ffmpeg: false, font: false };
+        }
     }
-    catch {
-        return { ffmpeg: false, font: false };
-    } }
 }
-export function wrap(input: string, columns: number, maxLines: number): string { const words = input.replace(/[\r\n]+/g, ' ').split(/\s+/); const lines: string[] = []; let line = ''; for (const word of words) {
-    if ((line + ' ' + word).trim().length > columns && line) {
-        lines.push(line);
-        line = '';
-    }
-    if (word.length > columns) {
-        if (line) {
+export function wrap(input: string, columns: number, maxLines: number): string {
+    const words = input.replace(/[\r\n]+/g, ' ').split(/\s+/);
+    const lines: string[] = [];
+    let line = '';
+    for (const word of words) {
+        if ((line + ' ' + word).trim().length > columns && line) {
             lines.push(line);
             line = '';
         }
-        for (let i = 0; i < word.length; i += columns)
-            lines.push(word.slice(i, i + columns));
+        if (word.length > columns) {
+            if (line) {
+                lines.push(line);
+                line = '';
+            }
+            for (let i = 0; i < word.length; i += columns)
+                lines.push(word.slice(i, i + columns));
+        }
+        else
+            line += (line ? ' ' : '') + word;
     }
-    else
-        line += (line ? ' ' : '') + word;
-} if (line)
-    lines.push(line); assert(lines.length <= maxLines, 'TEXT_OVERFLOW', `Il testo non entra nel template (${lines.length}/${maxLines} righe). Accorciare headline o testo.`); return lines.join('\n'); }
+    if (line)
+        lines.push(line);
+    assert(lines.length <= maxLines, 'TEXT_OVERFLOW', `Il testo non entra nel template (${lines.length}/${maxLines} righe). Accorciare headline o testo.`);
+    return lines.join('\n');
+}
 /** Fit text conservatively before invoking FFmpeg; never crop text silently. */
 export function templateLayout(headline: string, body: string, width: number, height: number) {
     const margin = Math.min(64, Math.round(width * 0.06));

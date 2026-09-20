@@ -8,6 +8,11 @@ export class Store {
         if (path !== ':memory:')
             mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
         this.db = new DatabaseSync(path);
+        const version = this.db.prepare('PRAGMA user_version').get();
+        if (Number(version.user_version) > 2) {
+            this.db.close();
+            throw new Error('Database di una release più recente: downgrade automatico rifiutato');
+        }
         this.db.exec(`
  PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;
  CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,email TEXT UNIQUE NOT NULL,password TEXT NOT NULL,created_at TEXT NOT NULL);
@@ -23,7 +28,16 @@ export class Store {
  CREATE INDEX IF NOT EXISTS audit_scope ON audit(workspace_id,brand_id,at);
  CREATE TABLE IF NOT EXISTS webhook_events(account_id TEXT NOT NULL,event_id TEXT NOT NULL,at INTEGER NOT NULL,PRIMARY KEY(account_id,event_id));
  CREATE TABLE IF NOT EXISTS oauth_states(id TEXT PRIMARY KEY,workspace_id TEXT NOT NULL,brand_id TEXT NOT NULL,user_id TEXT NOT NULL,provider TEXT NOT NULL,data TEXT NOT NULL,expires INTEGER NOT NULL);
- PRAGMA user_version=1;`);
+ CREATE TABLE IF NOT EXISTS site_admins(user_id TEXT PRIMARY KEY REFERENCES users(id));
+ CREATE TABLE IF NOT EXISTS installation(key TEXT PRIMARY KEY,value TEXT NOT NULL);
+ CREATE TABLE IF NOT EXISTS workspace_settings(workspace_id TEXT NOT NULL,key TEXT NOT NULL,value TEXT NOT NULL,PRIMARY KEY(workspace_id,key));
+ CREATE TABLE IF NOT EXISTS identities(provider TEXT NOT NULL,subject TEXT NOT NULL,user_id TEXT NOT NULL REFERENCES users(id),email TEXT NOT NULL,PRIMARY KEY(provider,subject),UNIQUE(provider,user_id));
+ CREATE TABLE IF NOT EXISTS user_flags(user_id TEXT PRIMARY KEY REFERENCES users(id),verified INTEGER NOT NULL DEFAULT 1,disabled INTEGER NOT NULL DEFAULT 0);
+ CREATE TABLE IF NOT EXISTS auth_actions(token_hash TEXT PRIMARY KEY,kind TEXT NOT NULL,email TEXT NOT NULL,user_id TEXT,workspace_id TEXT,role TEXT,data TEXT NOT NULL,expires INTEGER NOT NULL);
+ CREATE TABLE IF NOT EXISTS session_recent(token_hash TEXT PRIMARY KEY,at INTEGER NOT NULL);
+ CREATE TABLE IF NOT EXISTS connection_grants(id TEXT PRIMARY KEY,workspace_id TEXT NOT NULL,brand_id TEXT NOT NULL,user_id TEXT NOT NULL,provider TEXT NOT NULL,data TEXT NOT NULL,expires INTEGER NOT NULL);
+ CREATE TABLE IF NOT EXISTS connection_health(account_id TEXT PRIMARY KEY,state TEXT NOT NULL,checked_at TEXT NOT NULL,detail TEXT NOT NULL);
+ PRAGMA user_version=2;`);
     }
     transaction(fn) {
         this.db.exec('BEGIN IMMEDIATE');

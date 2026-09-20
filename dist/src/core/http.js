@@ -17,10 +17,11 @@ export class Network {
     constructor(extraOrigins = []) {
         this.extraOrigins = extraOrigins;
     }
+    setExtraOrigins(origins) { this.extraOrigins = origins; }
     async request(url, init = {}) {
         const u = new URL(url);
         assert(!u.username && !u.password, 'URL', 'Credenziali nella URL non consentite');
-        const known = ['https://graph.facebook.com', 'https://graph.instagram.com', 'https://graph.threads.net', 'https://api.telegram.org', 'https://open.tiktokapis.com', 'https://api.x.com', 'https://api.twitter.com', 'https://upload.twitter.com', 'https://api.linkedin.com', 'https://oauth.reddit.com', 'https://www.reddit.com', 'https://api.pinterest.com', 'https://www.googleapis.com', 'https://youtubeanalytics.googleapis.com', 'https://oauth2.googleapis.com', 'https://discord.com', 'https://slack.com', 'https://api.twitch.tv', 'https://api.neynar.com', 'https://bsky.social', 'https://api.bsky.app', 'https://api.postiz.com', 'https://generativelanguage.googleapis.com', 'https://api.openai.com'];
+        const known = ['https://accounts.google.com', 'https://www.linkedin.com', 'https://api.instagram.com', 'https://id.twitch.tv', 'https://api.resend.com', 'https://graph.facebook.com', 'https://graph.instagram.com', 'https://graph.threads.net', 'https://api.telegram.org', 'https://open.tiktokapis.com', 'https://api.x.com', 'https://api.twitter.com', 'https://upload.twitter.com', 'https://api.linkedin.com', 'https://oauth.reddit.com', 'https://www.reddit.com', 'https://api.pinterest.com', 'https://www.googleapis.com', 'https://youtubeanalytics.googleapis.com', 'https://oauth2.googleapis.com', 'https://discord.com', 'https://slack.com', 'https://api.twitch.tv', 'https://api.neynar.com', 'https://bsky.social', 'https://api.bsky.app', 'https://api.postiz.com', 'https://generativelanguage.googleapis.com', 'https://api.openai.com'];
         assert(known.includes(u.origin) || this.extraOrigins.includes(u.origin), 'EGRESS', 'Origin esterna non autorizzata. Configurarla lato server in OUTBOUND_ORIGINS.', 403);
         const mutating = !['GET', 'HEAD'].includes(init.method ?? 'GET');
         let r;

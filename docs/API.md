@@ -99,3 +99,42 @@ Per esiti `UNCERTAIN` il responsabile deve prima ispezionare l'account social: s
 `400` input/stato non valido, `401` login/token, `403` scope/ruolo/firma/CSRF, `404` oggetto fuori scope o inesistente, `409` conflitto revisione/stato, `413` dimensioni, `429` limite. I provider possono richiedere scope/quota aggiuntivi e produrre errori espliciti. Non loggare corpi con token o dati personali su reverse proxy/automazioni.
 
 Riconciliazione: `{revision,published,evidence,externalId?,url?}`. `published` è booleano; `evidence` descrive la verifica esterna realmente svolta. `externalId` è obbligatorio se il post è stato trovato. Ruolo admin umano richiesto. Un eventuale override editoriale usa `reason` (minimo 12 caratteri) e non può bypassare i controlli deterministici.
+
+## Identità, onboarding e amministrazione 0.2.0
+
+Tutti i POST/PUT/DELETE autenticati mantengono sessione, Origin e CSRF descritti sopra. Le operazioni host richiedono site admin; le operazioni OAuth del workspace richiedono admin umano. La ri-autenticazione recente dura 15 minuti; una risposta `REAUTH_REQUIRED` non esegue la scrittura.
+
+| Endpoint | Uso |
+|---|---|
+| GET `/api/public` | Configurazione pubblica senza segreti |
+| POST `/api/auth/signup`, `/api/auth/forgot`, `/api/auth/resend` | Registrazione/verifica/reset email, rate-limited |
+| POST `/api/auth/verify`, `/reset`, `/invite` | Consuma un token monouso, password dove necessaria |
+| POST `/api/auth/google/start` | Login Google; `{link:true}` richiede una sessione |
+| GET `/oauth/:provider/callback` | Callback stato + browser + token exchange, redirect 303 |
+| POST `/api/auth/reauth` | `{password}`; rinnova il recent-auth della sessione |
+| GET/PUT `/api/onboarding` | Stato wizard per workspace |
+| GET/PUT `/api/admin/installation` | Configurazione host oscurata / patch allowlist |
+| POST `/api/admin/installation/export` | `{includeSecrets:true}`, site admin e recent-auth |
+| POST `/api/admin/installation/test-model`, `/api/admin/installation/test-email` | Test espliciti verso servizi reali |
+| GET/POST `/api/admin/invitations` | Inviti del workspace |
+| DELETE `/api/admin/invitations/:hash` | Revoca invito non ancora accettato |
+| PUT `/api/admin/workspace` | Nome workspace |
+| PUT/DELETE `/api/admin/members/:id` | Cambia ruolo o rimuove membership; ultimo admin protetto |
+| GET `/api/admin/site` | Utenti e audit installazione |
+| PUT `/api/admin/site/users/:id` | Abilita/disabilita; self-lock protetto |
+| GET `/api/admin/oauth/apps` | App condivise, site admin |
+| PUT `/api/admin/oauth/apps/:provider` | Salva app condivisa, site admin e recent-auth |
+| GET `/api/oauth/apps` | App effettive nel workspace, con source/inherited |
+| PUT/DELETE `/api/oauth/apps/:provider` | Salva/rimuove override workspace, recent-auth |
+| POST `/api/brands/:id/oauth/:platform/start` | Restituisce URL di consenso e cookie binding |
+| GET `/api/oauth/grants/:id` | Destinazioni autorizzate, senza token |
+| POST `/api/oauth/grants/:id` | `{keys:[...]}` conferma destinazioni del grant |
+| GET `/api/brands/:id/connections` | Stato canali / expiry / rinnovo / verifica |
+| POST `/api/brands/:id/connect-telegram` | `{botToken,targetId}` con verifica provider |
+| POST `/api/accounts/:id/check`, `/api/accounts/:id/disconnect` | Verifica identità o revoca locale |
+| GET `/api/oauth/meta/webhook` | Callback workspace o indicazione managed |
+| GET `/api/admin/oauth/meta/webhook` | Callback globale + verify token, site admin |
+| GET/POST `/webhooks/meta-global` | Challenge/eventi firmati della app condivisa |
+| GET/POST `/webhooks/meta/:workspaceId` | Challenge/eventi firmati app workspace |
+
+Una configurazione `PUT /api/admin/installation` accetta `{values:{KEY:value},clear:[KEY]}`. Valori secret vuoti preservano quanto salvato, clear elimina esplicitamente. Chiavi non allowlisted o valori multilinea sono rifiutati. Gli access/refresh token dei social non appartengono a questo schema.

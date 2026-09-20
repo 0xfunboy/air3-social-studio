@@ -69,10 +69,21 @@ test('WhatsApp webhook signature, target binding, replay deduplication and verif
     assert.equal(webhooks.challenge(a.id, new URLSearchParams({ 'hub.mode': 'subscribe', 'hub.verify_token': 'verify', 'hub.challenge': '123' })), '123');
     assert.throws(() => webhooks.challenge(a.id, new URLSearchParams({ 'hub.mode': 'subscribe', 'hub.verify_token': 'bad' })));
 });
-test('WhatsApp delivery webhook resolves accepted message exactly once and cannot downgrade read', async (t) => { const f = await fixture(); t.after(() => f.cleanup()); const a = addAccount(f, 'whatsapp', 'direct', 'phone-1', { appSecret: 'secret' }); let e = addContent(f, a.id, { format: 'template', options: { recipient: '391234', template: { name: 'test', language: { code: 'it' } } } }); e = f.store.update(f.p, e.id, e.revision, { ...e.data, status: 'PROCESSING' as const, publication: { state: 'PROCESSING' as const, externalId: 'wamid.1', details: { stage: 'webhook', delivery: 'accepted' } } }); const hooks = new Webhooks(f.studio); for (const status of ['read', 'delivered', 'read']) {
-    const raw = Buffer.from(JSON.stringify({ entry: [{ changes: [{ value: { metadata: { phone_number_id: 'phone-1' }, statuses: [{ id: 'wamid.1', status }] } }] }] }));
-    await hooks.receive(a.id, { 'x-hub-signature-256': 'sha256=' + hmac(raw, 'secret') }, raw);
-} const saved = f.studio.content(f.p, e.id); assert.equal(saved.data.status, 'PUBLISHED'); assert.equal(saved.data.publication?.details?.delivery, 'read'); });
+test('WhatsApp delivery webhook resolves accepted message exactly once and cannot downgrade read', async (t) => {
+    const f = await fixture();
+    t.after(() => f.cleanup());
+    const a = addAccount(f, 'whatsapp', 'direct', 'phone-1', { appSecret: 'secret' });
+    let e = addContent(f, a.id, { format: 'template', options: { recipient: '391234', template: { name: 'test', language: { code: 'it' } } } });
+    e = f.store.update(f.p, e.id, e.revision, { ...e.data, status: 'PROCESSING' as const, publication: { state: 'PROCESSING' as const, externalId: 'wamid.1', details: { stage: 'webhook', delivery: 'accepted' } } });
+    const hooks = new Webhooks(f.studio);
+    for (const status of ['read', 'delivered', 'read']) {
+        const raw = Buffer.from(JSON.stringify({ entry: [{ changes: [{ value: { metadata: { phone_number_id: 'phone-1' }, statuses: [{ id: 'wamid.1', status }] } }] }] }));
+        await hooks.receive(a.id, { 'x-hub-signature-256': 'sha256=' + hmac(raw, 'secret') }, raw);
+    }
+    const saved = f.studio.content(f.p, e.id);
+    assert.equal(saved.data.status, 'PUBLISHED');
+    assert.equal(saved.data.publication?.details?.delivery, 'read');
+});
 test('Telegram callback approval requires signed webhook, exact chat and current human membership', async (t) => {
     const f = await fixture();
     t.after(() => f.cleanup());

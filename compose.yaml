@@ -4,18 +4,26 @@ services:
     env_file: .env
     environment:
       HOST: 0.0.0.0
+      PORT: 3100
       DATA_DIR: /app/data
+      FONT_PATH: /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf
     ports:
       - "127.0.0.1:3100:3100"
     volumes:
       - studio-data:/app/data
     init: true
     restart: unless-stopped
+    stop_grace_period: 2m
     security_opt:
       - no-new-privileges:true
     cap_drop: [ALL]
     read_only: true
     tmpfs:
       - /tmp:size=256m,noexec,nosuid
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 volumes:
   studio-data:

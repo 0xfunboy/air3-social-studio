@@ -1,0 +1,20 @@
+// Local-only browser test host. No outbound provider calls and no worker.
+import { bootstrap } from '../../dist/src/core/bootstrap.js';
+import { config } from '../../dist/src/core/config.js';
+import { Store } from '../../dist/src/core/store.js';
+import { createApp } from '../../dist/src/api/server.js';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+const dir = mkdtempSync(join(tmpdir(), 'air3-browser-'));
+const c = config({ MASTER_KEY: '77'.repeat(32), DATA_DIR: dir, BASE_URL: 'http://127.0.0.1:3199', PORT: '3199', BOOTSTRAP_EMAIL: 'studio@example.test', BOOTSTRAP_PASSWORD: 'browser-test-password-only', WORKER_ENABLED: 'false' });
+const http = { async request() { throw new Error('Browser test: external services are deliberately unavailable'); } };
+const app = bootstrap(c, http, undefined, new Store(':memory:'));
+const m = app.store.db.prepare('SELECT * FROM memberships').get();
+const p = { userId: m.user_id, workspaceId: m.workspace_id, role: 'admin', via: 'session' };
+app.store.db.prepare('UPDATE workspaces SET name=? WHERE id=?').run('Design review · test locale', p.workspaceId);
+const b = app.studio.saveBrand(p, { name: 'Forma Studio', description: 'Studio creativo indipendente. Brand di collaudo locale.', tone: ['Chiaro', 'Curioso', 'Autentico'], colors: ['#008d78'] });
+await app.studio.rag.ingest({ ...p, brandId: b.id }, b.id, { title: 'Voce del brand · collaudo', text: 'Comunichiamo in italiano con un tono chiaro, curioso e autentico. Questa è una fonte di collaudo locale.', type: 'brand', source: 'Test locale', approved: true, roles: ['copywriter', 'reviewer'], platform: '*' }).catch(() => { });
+const server = createApp(app.studio, app.auth, resolve('web'));
+server.listen(3199, '127.0.0.1', () => console.log('Browser fixture listening 3199'));
+process.on('SIGTERM', () => { server.close(); app.store.close(); rmSync(dir, { recursive: true, force: true }); process.exit(0); });

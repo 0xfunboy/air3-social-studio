@@ -26,6 +26,7 @@ export class Studio {
     media;
     hub;
     model;
+    extensions;
     constructor(store, cfg, rag, media, hub, model) {
         this.store = store;
         this.cfg = cfg;

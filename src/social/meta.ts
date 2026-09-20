@@ -5,8 +5,13 @@ import { jsonRequest, apiSuccess } from '../core/http.js';
 import { assert, now } from '../core/util.js';
 export class MetaClient {
     constructor(private http: Http, private cfg: Config) { }
-    private base(a: Account): string { if (a.platform === 'threads')
-        return 'https://graph.threads.net/v1.0'; const v = this.cfg.graphVersion; assert(/^v\d+\.\d+$/.test(v), 'META_VERSION', 'Configurare META_GRAPH_VERSION con una versione supportata dalla propria app Meta'); return `https://${a.options.login === 'instagram' ? 'graph.instagram.com' : 'graph.facebook.com'}/${v}`; }
+    private base(a: Account): string {
+        if (a.platform === 'threads')
+            return 'https://graph.threads.net/v1.0';
+        const v = this.cfg.graphVersion;
+        assert(/^v\d+\.\d+$/.test(v), 'META_VERSION', 'Configurare META_GRAPH_VERSION con una versione supportata dalla propria app Meta');
+        return `https://${a.options.login === 'instagram' ? 'graph.instagram.com' : 'graph.facebook.com'}/${v}`;
+    }
     private async get(a: Account, c: Bag, path: string): Promise<Bag> { return (await this.http.request(this.base(a) + path, { headers: { Authorization: `Bearer ${c.accessToken}` } })).body; }
     private async post(a: Account, c: Bag, path: string, body: Bag): Promise<Bag> { assert(c.accessToken, 'META_TOKEN', 'Access token Meta mancante'); const r = await this.http.request(this.base(a) + path, jsonRequest(body, c.accessToken)); apiSuccess(r.body, 'Meta'); return r.body; }
     async publish(a: Account, c: Bag, p: SocialPost): Promise<Receipt> {

@@ -1,6 +1,6 @@
 # Client social: capacità, configurazione e limiti
 
-Release 0.1.0, 20 settembre 2026. Ogni riga identifica un adapter implementato, **non una verifica live dell'account**. Le restrizioni lato provider, gli scope concessi e gli audit dell'app prevalgono sulla configurazione locale. Le API di publishing non sono equivalenti ai prodotti consumer: non ogni funzione visibile nell'app mobile ha un endpoint pubblico.
+Release 0.2.0, 20 settembre 2026. Ogni riga identifica un adapter implementato, **non una verifica live dell'account**. Le restrizioni lato provider, gli scope concessi e gli audit dell'app prevalgono sulla configurazione locale. Le API di publishing non sono equivalenti ai prodotti consumer: non ogni funzione visibile nell'app mobile ha un endpoint pubblico.
 
 ## Catalogo e trasporti
 
@@ -17,7 +17,7 @@ Release 0.1.0, 20 settembre 2026. Ogni riga identifica un adapter implementato, 
 | `linkedin-page` | Post testo di un'organizzazione | Media secondo integrazione LinkedIn Page |
 | `x` | Post testo | Media e opzioni X |
 | `telegram` | Bot: testo, foto, album, video; approvazioni e webhook | Publishing tramite integrazione Telegram |
-| `youtube` | Nessun upload nativo in questa release | Video / Shorts: titolo, visibilità, made-for-kids |
+| `youtube` | MP4 locale con upload resumable, polling e statistiche | Video / Shorts: titolo, visibilità, made-for-kids |
 | `pinterest` | Pin immagine su board autorizzata | Formati estesi dell'integrazione |
 | `reddit` | Self-post testuale con titolo e subreddit | Formati estesi dell'integrazione |
 | `bluesky` | Record testuale AT Protocol | Media dell'integrazione |
@@ -31,7 +31,7 @@ I formati estesi dipendono dalla versione e dalla configurazione di Postiz: ques
 
 ## Account e segreti
 
-Dalla dashboard **Canali → Nuovo account** scegliere piattaforma, trasporto e target. Le `credentials` sono cifrate AES-256-GCM; le `options` sono configurazione visibile. Non mettere token o password nelle options. Cambiare account, target, credenziali o opzioni modifica la revisione e invalida le approvazioni dei post collegati.
+Preferire **Canali → Collega** per OAuth e **Collega bot** per Telegram. Per il percorso manuale **Canali → Nuovo account** scegliere piattaforma, trasporto e target. Le `credentials` sono cifrate AES-256-GCM; le `options` sono configurazione visibile. Non mettere token o password nelle options. Cambiare manualmente account, target, credenziali o opzioni modifica la revisione e invalida le approvazioni dei post collegati. Il solo rinnovo automatico dei token del medesimo grant preserva la revisione editoriale.
 
 | Diretto | `targetId` | Campi `credentials` |
 |---|---|---|
@@ -46,6 +46,7 @@ Dalla dashboard **Canali → Nuovo account** scegliere piattaforma, trasporto e 
 | LinkedIn pagina | `urn:li:organization:…` autorizzata | `accessToken` |
 | X | ID autore come riferimento locale | token utente `accessToken`, non token app-only |
 | Telegram | ID raw del gruppo/canale o `@channel` per l'invio | `botToken`, `webhookSecret` per webhook |
+| YouTube | ID canale | `accessToken`; preferire il grant OAuth per il rinnovo |
 | Pinterest | ID board | `accessToken` |
 | Reddit | Nome subreddit senza `/r/` | `accessToken`, `username` per User-Agent |
 | Bluesky | DID autore come riferimento locale | `accessToken`, `did`, `pds` opzionale (default `https://bsky.social`) |
@@ -57,13 +58,13 @@ Dalla dashboard **Canali → Nuovo account** scegliere piattaforma, trasporto e 
 
 Il target locale non conferisce permessi: per X, TikTok, Bluesky, Farcaster e Slack l'identità effettiva dipende dal token/signer. Verificare l'account autenticato prima del primo invio.
 
-I client nativi accettano token già ottenuti dall'operatore. **Non includono wizard OAuth completo, rinnovo automatico o verifica universale degli scope.** Registrare l'app nel provider, ottenere i grant corretti, conservare scadenze e ruotare i token. Preferire Postiz per demandare i flussi di collegamento social supportati.
+La release 0.2.0 implementa OAuth nativo, app condivise o proprie, discovery, selezione e rinnovo dei token dove disponibile. Il percorso manuale resta utilizzabile. Non ogni grant ha un refresh token: Meta e permessi LinkedIn sono esempi per cui può essere necessario un nuovo consenso. Vedere [OAUTH](OAUTH.md) per i 12 flussi implementati e i limiti.
 
 ## Postiz
 
 Impostare `transport: "postiz"`, `targetId` uguale all'ID dell'integrazione restituito da Postiz, e credentials con `apiKey` e `baseUrl`. Il default hosted è `https://api.postiz.com/public/v1`; per self-hosted indicare la propria base completa dell'API pubblica. Aggiungere la **origin** del server a `OUTBOUND_ORIGINS` nel backend, non tramite dati forniti dal modello.
 
-La dashboard permette di leggere le integrazioni e ottenere la URL di collegamento dal proprio Postiz. L'utente completa OAuth in Postiz, poi seleziona/copia l'ID integrazione nel canale dello Studio. Non si tratta di un OAuth callback implementato nel nuovo backend.
+La dashboard permette di leggere le integrazioni e ottenere la URL di collegamento dal proprio Postiz. L'utente completa OAuth in Postiz, poi seleziona/copia l'ID integrazione nel canale dello Studio. Questo percorso Postiz è distinto dagli OAuth nativi ora presenti nello Studio.
 
 Lo Studio gestisce gli orari; quando il job scatta invia a Postiz `type: "now"`. L'ID del job Postiz resta `PROCESSING` finché il suo stato non è `PUBLISHED`. Non si applicano due scheduler indipendenti al medesimo contenuto. I media vengono caricati con `upload-from-url`: il server Postiz deve poter raggiungere gli URL pubblici firmati.
 
@@ -77,7 +78,7 @@ Il publishing Instagram/Threads crea prima container; il worker interroga lo sta
 
 ### WhatsApp, Messenger e Instagram Direct
 
-Configurare callback pubblico `BASE_URL/webhooks/ACCOUNT_ID`, verify token e App Secret dell'app. La verifica GET risponde solo al verify token corretto; i POST Meta richiedono la firma SHA-256 e un target coerente con l'account.
+Con OAuth usare la callback condivisa dell’app descritta in OAUTH.md. Per token manuali configurare callback pubblico `BASE_URL/webhooks/ACCOUNT_ID`, verify token e App Secret dell’app. La verifica GET risponde solo al verify token corretto; i POST Meta richiedono la firma SHA-256 e un target coerente con l'account.
 
 Le finestre di risposta si aprono solo dopo eventi inbound firmati. La rubrica manuale non può impostare `lastInboundAt`. WhatsApp: nella finestra di 24h sono ammessi messaggi liberi; fuori finestra occorrono consenso registrato e template approvato. Il JSON del contenuto template è `options.template` con `name`, `language: {"code":"it"}` e gli eventuali `components` previsti dal template, più `options.recipient`. Non è un sistema per messaggi a liste acquisite senza consenso.
 
@@ -104,8 +105,12 @@ Per approvare da Telegram aggiungere nelle options dell'account notificatore:
 
 Gli ID sopra sono solo esempi di forma. Recuperare l'ID interno reale da **Impostazioni → Membri** e verificare gli ID Telegram raw. Il backend controlla firma, chat, mappatura, ruolo attuale e revisione del contenuto. L'approvazione Telegram non programma automaticamente il post. Media e consenso TikTok richiedono la dashboard.
 
+## YouTube nativo
+
+Richiede un MP4 realmente caricato nella media library e selezionato con ID asset locale, entro 128 MiB. Non scarica file arbitrari da URL per avviare un upload nativo. Titolo, visibilità e made-for-kids sono espliciti. L’upload usa una sessione resumable e ne valida la origin prima di trasmettere i byte; il worker interroga l’elaborazione e le metriche quando disponibili. Il backend non garantisce la classificazione Shorts, decisa da YouTube. Per altri formati usare il percorso Postiz supportato.
+
 ## Analytics e prove live
 
-Native: X public_metrics, Instagram like/comment count, Mastodon reblog/reply/favourite. Gli altri adapter ricorrono a Postiz dove disponibile oppure accettano importazioni con fonte dichiarata. Nessuna API universale fornisce automaticamente conversioni/app-download; collegare un sistema di attribuzione e importare dati verificabili. Un provider che non espone metriche viene indicato come non supportato, non convertito in una serie di zeri.
+Native: X public_metrics, Instagram like/comment count, Mastodon reblog/reply/favourite, YouTube statistics. Gli altri adapter ricorrono a Postiz dove disponibile oppure accettano importazioni con fonte dichiarata. Nessuna API universale fornisce automaticamente conversioni/app-download; collegare un sistema di attribuzione e importare dati verificabili. Un provider che non espone metriche viene indicato come non supportato, non convertito in una serie di zeri.
 
 Prima di attivare scheduling ricorrente fare, su ogni account: un post innocuo approvato; verifica dell'ID esterno; verifica dell'esito asincrono; verifica di un errore di autorizzazione; controllo delle metriche realmente disponibili. Tali prove live non sono state eseguite nella preparazione dello ZIP. Fonti e riferimenti in [SOURCES](SOURCES.md).

@@ -44,10 +44,16 @@ Base: `source/SMM_AI_architettura.md`. La numerazione conserva le 37 sezioni ori
 
 ## Aggiunte richieste nell'ultimo messaggio
 
-Telegram Bot API; WhatsApp Business Cloud API; Messenger; Instagram Direct; Facebook Pages; Instagram Professional; Threads; TikTok; X; LinkedIn member/page; YouTube/Shorts via Postiz; Pinterest; Reddit; Bluesky; Mastodon; Discord; Farcaster via Neynar; Twitch chat; Slack. Per ciascuno vedere `SOCIAL_CLIENTS.md`.
+Telegram Bot API; WhatsApp Business Cloud API; Messenger; Instagram Direct; Facebook Pages; Instagram Professional; Threads; TikTok; X; LinkedIn member/page; YouTube MP4 nativo e YouTube/Shorts via Postiz; Pinterest; Reddit; Bluesky; Mastodon; Discord; Farcaster via Neynar; Twitch chat; Slack. Per ciascuno vedere `SOCIAL_CLIENTS.md`.
 
 ## Funzioni non presenti e non simulate
 
-Pubblicazione di WhatsApp Status/Channels o gestione WhatsApp Web; profili Facebook personali; Ads Manager/Marketing API e acquisto pubblicità; Marketplace/commerce/VR Meta; gestione universale di commenti e DM di tutti i social; importazione PDF/DOCX/OCR nativa; onboarding OAuth nativo e refresh automatico per ogni singolo provider; montaggio video generativo arbitrario, avatar/TTS; replica multi-host/ANN; billing/SSO/MFA/password recovery; social listening/crawler universale; crescita commerciale garantita.
+Pubblicazione di WhatsApp Status/Channels o gestione WhatsApp Web; profili Facebook personali; Ads Manager/Marketing API e acquisto pubblicità; Marketplace/commerce/VR Meta; gestione universale di commenti e DM di tutti i social; importazione PDF/DOCX/OCR nativa; rinnovo garantito senza nuovo consenso per tutti i provider; montaggio video generativo arbitrario, avatar/TTS; replica multi-host/ANN; billing/SAML/MFA; social listening/crawler universale; crescita commerciale garantita.
 
 Questi limiti sono espliciti nell'interfaccia e nella documentazione. Per canali non ancora autorizzati una credenziale salvata è indicata come “configurata”, non “verificata live”.
+
+## Frontend e onboarding richiesti successivamente: 0.2.0
+
+Landing pubblica, design Paper/Graphite light/dark, logo isometrico SVG, login email/password e Google OIDC, verifica email, inviti e recupero password, ruoli workspace e site admin separati, wizard in cinque passi, app OAuth condivise con override tenant, discovery e selezione account, refresh dove il grant lo permette, configurazione cifrata e generazione env: implementati.
+
+Google login e 12 famiglie di OAuth hanno implementazione nativa; Telegram ha collegamento guidato del bot. La scoperta provider può avere limiti di paginazione dichiarati. I formati e le funzionalità native restano quelli di SOCIAL_CLIENTS.md: il nuovo wizard non crea automaticamente app review, permessi o funzioni consumer prive di API. Il deploy ha un gate locale e una checklist separata per le prove live.

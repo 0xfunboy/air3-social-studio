@@ -1,0 +1,19 @@
+{
+  "product": "AIR3 Social Studio",
+  "version": "0.2.0",
+  "releaseDate": "2026-09-20",
+  "nodeTested": "v22.16.0",
+  "typescript": "5.8.3",
+  "nodeTests": {
+    "passed": 115,
+    "failed": 0,
+    "skipped": 0
+  },
+  "runtimeNpmDependencies": 0,
+  "browserMode": "Offline component tests with explicit in-memory API fixtures",
+  "httpMode": "Real local server and persistent SQLite",
+  "providerMode": "HTTP contracts with fixtures; no live account authorization or publishing",
+  "dockerBuiltHere": false,
+  "liveGate": "docs/RELEASE-GATE.md",
+  "license": "See LICENSING.md"
+}

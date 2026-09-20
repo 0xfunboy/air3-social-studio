@@ -12,11 +12,12 @@ export interface Http {
     request(url: string, init?: RequestInit): Promise<HttpResult>;
 }
 export class Network implements Http {
-    constructor(private readonly extraOrigins: string[] = []) { }
+    constructor(private extraOrigins: string[] = []) { }
+    setExtraOrigins(origins: string[]): void { this.extraOrigins = origins; }
     async request(url: string, init: RequestInit = {}): Promise<HttpResult> {
         const u = new URL(url);
         assert(!u.username && !u.password, 'URL', 'Credenziali nella URL non consentite');
-        const known = ['https://graph.facebook.com', 'https://graph.instagram.com', 'https://graph.threads.net', 'https://api.telegram.org', 'https://open.tiktokapis.com', 'https://api.x.com', 'https://api.twitter.com', 'https://upload.twitter.com', 'https://api.linkedin.com', 'https://oauth.reddit.com', 'https://www.reddit.com', 'https://api.pinterest.com', 'https://www.googleapis.com', 'https://youtubeanalytics.googleapis.com', 'https://oauth2.googleapis.com', 'https://discord.com', 'https://slack.com', 'https://api.twitch.tv', 'https://api.neynar.com', 'https://bsky.social', 'https://api.bsky.app', 'https://api.postiz.com', 'https://generativelanguage.googleapis.com', 'https://api.openai.com'];
+        const known = ['https://accounts.google.com', 'https://www.linkedin.com', 'https://api.instagram.com', 'https://id.twitch.tv', 'https://api.resend.com', 'https://graph.facebook.com', 'https://graph.instagram.com', 'https://graph.threads.net', 'https://api.telegram.org', 'https://open.tiktokapis.com', 'https://api.x.com', 'https://api.twitter.com', 'https://upload.twitter.com', 'https://api.linkedin.com', 'https://oauth.reddit.com', 'https://www.reddit.com', 'https://api.pinterest.com', 'https://www.googleapis.com', 'https://youtubeanalytics.googleapis.com', 'https://oauth2.googleapis.com', 'https://discord.com', 'https://slack.com', 'https://api.twitch.tv', 'https://api.neynar.com', 'https://bsky.social', 'https://api.bsky.app', 'https://api.postiz.com', 'https://generativelanguage.googleapis.com', 'https://api.openai.com'];
         assert(known.includes(u.origin) || this.extraOrigins.includes(u.origin), 'EGRESS', 'Origin esterna non autorizzata. Configurarla lato server in OUTBOUND_ORIGINS.', 403);
         const mutating = !['GET', 'HEAD'].includes(init.method ?? 'GET');
         let r: Response;
@@ -58,6 +59,9 @@ export class Network implements Http {
     }
 }
 export const jsonRequest = (body: unknown, token?: string, headers: Record<string, string> = {}): RequestInit => ({ method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...headers }, body: JSON.stringify(body) });
-export function apiSuccess(body: Bag, provider: string): void { if (body.error && body.error.code && body.error.code !== 'ok')
-    throw new ProviderError(provider, false, false, 0, `${provider}: ${String(body.error.code).slice(0, 100)}`); if (body.ok === false)
-    throw new ProviderError(provider, body.error_code === 429, false, (body.parameters?.retry_after ?? 0) * 1000, `${provider}: ${body.error_code ?? 'API_ERROR'}`); }
+export function apiSuccess(body: Bag, provider: string): void {
+    if (body.error && body.error.code && body.error.code !== 'ok')
+        throw new ProviderError(provider, false, false, 0, `${provider}: ${String(body.error.code).slice(0, 100)}`);
+    if (body.ok === false)
+        throw new ProviderError(provider, body.error_code === 429, false, (body.parameters?.retry_after ?? 0) * 1000, `${provider}: ${body.error_code ?? 'API_ERROR'}`);
+}

@@ -42,7 +42,7 @@ Dal contratto letto: Authorization contiene la chiave API senza prefisso Bearer;
 - LinkedIn Posts: https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api?view=li-lms-2026-09
 - X create post: https://docs.x.com/x-api/posts/create-post
 - Telegram Bot API: https://core.telegram.org/bots/api
-- YouTube upload: https://developers.google.com/youtube/v3/docs/videos/insert (implementazione delegata a Postiz)
+- YouTube upload: https://developers.google.com/youtube/v3/docs/videos/insert (upload MP4 nativo e trasporto Postiz disponibili)
 - Mastodon status: https://docs.joinmastodon.org/methods/statuses/
 - Bluesky createRecord: https://docs.bsky.app/docs/api/com-atproto-repo-create-record
 - Reddit: https://www.reddit.com/dev/api/
@@ -61,3 +61,27 @@ Alcune pagine developers.facebook.com hanno risposto con limiti di accesso duran
 - Node SQLite: https://nodejs.org/api/sqlite.html
 
 La matrice di release separa capacità implementate e roadmap; il documento iniziale resta conservato senza reinterpretarlo come prova che tutte le integrazioni siano già abilitate presso i provider.
+
+## OAuth, identità e deploy aggiunti in 0.2.0
+
+Consultati il 20 settembre 2026. Questi link sono documentazione primaria, non provider connessi né attestazioni del prodotto.
+
+- Google OpenID Connect: https://developers.google.com/identity/openid-connect/openid-connect
+- Google server-side OAuth: https://developers.google.com/identity/protocols/oauth2/web-server
+- YouTube resumable upload: https://developers.google.com/youtube/v3/guides/using_resumable_upload_protocol
+- TikTok Web: https://developers.tiktok.com/doc/login-kit-web/
+- TikTok token: https://developers.tiktok.com/doc/oauth-user-access-token-management
+- X authorization code/PKCE: https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code
+- LinkedIn authorization code: https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow
+- LinkedIn versione settembre 2026: https://learn.microsoft.com/en-us/linkedin/marketing/versioning?view=li-lms-2026-09
+- Threads, collezione ufficiale Meta: https://www.postman.com/meta/threads/documentation/dht3nzz/threads-api
+- Slack OAuth: https://docs.slack.dev/authentication/installing-with-oauth/
+- Twitch OAuth: https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/
+- Reddit OAuth, wiki ufficiale archiviata: https://github.com/reddit-archive/reddit/wiki/OAuth2
+- Pinterest: https://developers.pinterest.com/docs/getting-started/connect-app/
+- Discord OAuth: https://docs.discord.com/developers/topics/oauth2
+- Mastodon: https://docs.joinmastodon.org/client/token/
+- Docker Compose production: https://docs.docker.com/compose/how-tos/production/
+- Caddy reverse_proxy: https://caddyserver.com/docs/caddyfile/directives/reverse_proxy
+
+Il default LinkedIn `202609` corrisponde alla versione documentata per settembre 2026; il codice non suppone che rimanga valida per sempre. Meta Graph non ha un default silenzioso: l’operatore sceglie la versione della propria app. La documentazione Google raccomanda librerie consolidate; qui il piccolo verificatore OIDC usa primitive crittografiche Node e test espliciti, ma resta da sottoporre a revisione di sicurezza indipendente prima di un’esposizione sensibile.
