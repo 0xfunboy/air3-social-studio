@@ -50,7 +50,7 @@ export function createApp(studio: Studio, auth: Auth, webRoot = resolve('web')):
             const method = req.method ?? 'GET', u = new URL(req.url ?? '/', studio.cfg.baseUrl), path = u.pathname;
             if (await experience.callback(req, res, u))
                 return;
-            if (path === '/healthz' && method === 'GET') {
+            if (path === '/healthz' && (method === 'GET' || method === 'HEAD')) {
                 send(res, { ok: true, service: 'air3-social-studio', version: '0.2.0' });
                 return;
             }

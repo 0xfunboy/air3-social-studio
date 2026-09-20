@@ -18,19 +18,10 @@ export class Auth {
             assert(cfg.bootstrapPassword.length >= 16, 'CONFIG', 'Password bootstrap: almeno 16 caratteri');
             store.transaction(() => { const uid = id(), wid = id(); store.db.prepare('INSERT INTO users VALUES (?,?,?,?)').run(uid, cfg.bootstrapEmail.toLowerCase(), passwordHash(cfg.bootstrapPassword), now()); store.db.prepare('INSERT INTO workspaces VALUES (?,?)').run(wid, 'Il mio workspace'); store.db.prepare('INSERT INTO memberships VALUES (?,?,?)').run(uid, wid, 'admin'); store.db.prepare('INSERT OR IGNORE INTO site_admins VALUES (?)').run(uid); });
         }
-        let funboy = store.db.prepare("SELECT id FROM users WHERE email='0xfunboy@gmail.com'").get() as Bag | undefined;
-        if (!funboy) {
-            const uid = id(), wid = (store.db.prepare('SELECT id FROM workspaces LIMIT 1').get() as Bag)?.id || id();
-            store.transaction(() => {
-                store.db.prepare('INSERT INTO users VALUES (?,?,?,?)').run(uid, '0xfunboy@gmail.com', passwordHash('SuperAdmin2026!AIR3Studio'), now());
-                store.db.prepare('INSERT OR IGNORE INTO user_flags VALUES (?,1,0)').run(uid);
-                store.db.prepare('INSERT OR IGNORE INTO workspaces VALUES (?,?)').run(wid, 'Il mio studio');
-                store.db.prepare('INSERT OR IGNORE INTO memberships VALUES (?,?,?)').run(uid, wid, 'admin');
-                store.db.prepare('INSERT OR IGNORE INTO site_admins VALUES (?)').run(uid);
-            });
-            funboy = { id: uid };
+        const funboy = store.db.prepare("SELECT id FROM users WHERE email='0xfunboy@gmail.com'").get() as Bag | undefined;
+        if (funboy) {
+            this.ensureSuperadmin(funboy.id as string);
         }
-        this.ensureSuperadmin(funboy.id as string);
     }
     ensureSuperadmin(userId: string): void {
         const db = this.store.db;
