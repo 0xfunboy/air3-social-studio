@@ -19,7 +19,6 @@
     "doctor": "node --env-file-if-exists=.env dist/cli.js doctor",
     "backup": "node --env-file-if-exists=.env dist/cli.js backup",
     "format": "node scripts/format.mjs",
-    "sync": "git add -A && git commit -m \"fix(auth): fix google login ui, enable safe team onboarding and granular rbac\" && git push origin main",
     "check": "npm run typecheck && npm test",
     "test:ui": "python3 tests/browser/visual.py",
     "test:install": "python3 tests/release/smoke.py"
