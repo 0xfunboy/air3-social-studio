@@ -18,6 +18,7 @@ export class Store {
  CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,email TEXT UNIQUE NOT NULL,password TEXT NOT NULL,created_at TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS workspaces(id TEXT PRIMARY KEY,name TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS memberships(user_id TEXT NOT NULL,workspace_id TEXT NOT NULL,role TEXT NOT NULL,PRIMARY KEY(user_id,workspace_id),FOREIGN KEY(user_id) REFERENCES users(id),FOREIGN KEY(workspace_id) REFERENCES workspaces(id));
+ CREATE TABLE IF NOT EXISTS member_permissions(workspace_id TEXT NOT NULL,user_id TEXT NOT NULL,permissions TEXT NOT NULL,PRIMARY KEY(workspace_id,user_id),FOREIGN KEY(user_id) REFERENCES users(id),FOREIGN KEY(workspace_id) REFERENCES workspaces(id));
  CREATE TABLE IF NOT EXISTS sessions(token_hash TEXT PRIMARY KEY,user_id TEXT NOT NULL,csrf TEXT NOT NULL,expires INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS tokens(id TEXT PRIMARY KEY,token_hash TEXT UNIQUE NOT NULL,workspace_id TEXT NOT NULL,brand_id TEXT NOT NULL,role TEXT NOT NULL,name TEXT NOT NULL,expires INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS entities(id TEXT PRIMARY KEY,workspace_id TEXT NOT NULL,brand_id TEXT NOT NULL,kind TEXT NOT NULL,revision INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL,updated_at TEXT NOT NULL,data TEXT NOT NULL);

@@ -170,7 +170,15 @@ export function createApp(studio, auth, webRoot = resolve('web')) {
                     requireRole(p, 'admin');
                     requireHuman(p);
                     if (method === 'GET') {
-                        send(res, studio.store.db.prepare('SELECT u.id,u.email,m.role FROM users u JOIN memberships m ON m.user_id=u.id WHERE m.workspace_id=?').all(p.workspaceId));
+                        const rows = studio.store.db.prepare('SELECT u.id,u.email,m.role,COALESCE(mp.permissions,"[]") as permissions FROM users u JOIN memberships m ON m.user_id=u.id LEFT JOIN member_permissions mp ON mp.workspace_id=m.workspace_id AND mp.user_id=u.id WHERE m.workspace_id=?').all(p.workspaceId);
+                        send(res, rows.map(r => {
+                            let perms = [];
+                            try {
+                                perms = JSON.parse(r.permissions);
+                            }
+                            catch { }
+                            return { id: r.id, email: r.email, role: r.role, permissions: Array.isArray(perms) ? perms : [] };
+                        }));
                         return;
                     }
                     if (method === 'POST') {

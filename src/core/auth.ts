@@ -5,6 +5,51 @@ import type { Config } from './config.js';
 import { passwordHash, passwordValid, equal } from './crypto.js';
 import { assert, id, sha, text, now } from './util.js';
 import { ROLES, type Principal, type Role, type Bag } from './types.js';
+export const CUSTOM_PERMISSIONS = [
+    'content.create',
+    'content.edit',
+    'content.approve',
+    'content.publish',
+    'media.upload',
+    'knowledge.manage',
+    'knowledge.approve',
+    'accounts.manage'
+] as const;
+export type CustomPermission = typeof CUSTOM_PERMISSIONS[number];
+
+export const ROLE_BASE_PERMISSIONS: Record<Role, readonly string[]> = {
+    viewer: [],
+    editor: ['content.create', 'content.edit', 'media.upload'],
+    approver: ['content.create', 'content.edit', 'media.upload', 'content.approve', 'content.publish', 'knowledge.approve'],
+    admin: ['*']
+};
+
+export function getMemberPermissions(store: Store, workspaceId: string, userId: string, role: Role): string[] {
+    const base = ROLE_BASE_PERMISSIONS[role] ? [...ROLE_BASE_PERMISSIONS[role]] : [];
+    const row = store.db.prepare('SELECT permissions FROM member_permissions WHERE workspace_id=? AND user_id=?').get(workspaceId, userId) as { permissions: string } | undefined;
+    if (row?.permissions) {
+        try {
+            const extra = JSON.parse(row.permissions);
+            if (Array.isArray(extra)) {
+                for (const p of extra) {
+                    if (typeof p === 'string' && !base.includes(p)) base.push(p);
+                }
+            }
+        } catch {}
+    }
+    return base;
+}
+
+export function hasPermission(store: Store, p: Principal, permission: string): boolean {
+    if (p.role === 'admin') return true;
+    const perms = getMemberPermissions(store, p.workspaceId, p.userId, p.role);
+    return perms.includes('*') || perms.includes(permission);
+}
+
+export function requirePermission(store: Store, p: Principal, permission: string): void {
+    assert(hasPermission(store, p, permission), 'FORBIDDEN', `Permesso insufficiente: ${permission}`, 403);
+}
+
 export function requireRole(p: Principal, role: Role): void { assert(ROLES.indexOf(p.role) >= ROLES.indexOf(role), 'FORBIDDEN', 'Permesso insufficiente', 403); }
 export function requireHuman(p: Principal): void { assert((p.via === 'session' || p.via === 'telegram'), 'HUMAN_REQUIRED', 'Questa azione richiede una sessione umana autenticata', 403); }
 export function isSuperadminEmail(email?: string): boolean {

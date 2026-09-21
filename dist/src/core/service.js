@@ -1,7 +1,7 @@
 import { PLATFORMS } from './types.js';
 import { assert, id, now, object, sha, stable, strings, text, timestamp, safeError } from './util.js';
 import { encrypt } from './crypto.js';
-import { requireRole, requireHuman } from './auth.js';
+import { requireRole, requireHuman, hasPermission } from './auth.js';
 import { credentialAad } from '../social/hub.js';
 import { CAPABILITIES, validatePost } from '../social/capabilities.js';
 import { validateSchema } from '../agents/llm.js';
@@ -102,10 +102,10 @@ export class Studio {
         return publicAccount(saved);
     }
     async saveKnowledge(p, brandId, input, documentId) {
-        requireRole(p, 'editor');
+        assert(p.role === 'admin' || p.role === 'approver' || p.role === 'editor' || hasPermission(this.store, p, 'knowledge.manage'), 'FORBIDDEN', 'Permesso insufficiente', 403);
         p = this.scope(p, brandId);
         if (input.approved === true) {
-            requireRole(p, 'approver');
+            assert(p.role === 'admin' || p.role === 'approver' || hasPermission(this.store, p, 'knowledge.approve'), 'FORBIDDEN', 'Permesso insufficiente per approvare', 403);
             requireHuman(p);
         }
         if (input.validFrom)
@@ -121,7 +121,7 @@ export class Studio {
         this.store.audit(p, brandId, 'knowledge.saved', e.id, { approved: data.approved, chunks: data.chunks.length, embeddingModel: data.embeddingModel });
         return e;
     }
-    approveKnowledge(p, documentId, revision, approved) { requireRole(p, 'approver'); requireHuman(p); const e = this.store.get(p, documentId, 'knowledge'); const updated = this.store.update(p, e.id, revision, { ...e.data, approved }); this.store.audit(p, e.brandId, 'knowledge.approval', e.id, { approved }); return updated; }
+    approveKnowledge(p, documentId, revision, approved) { assert(p.role === 'admin' || p.role === 'approver' || hasPermission(this.store, p, 'knowledge.approve'), 'FORBIDDEN', 'Permesso insufficiente', 403); requireHuman(p); const e = this.store.get(p, documentId, 'knowledge'); const updated = this.store.update(p, e.id, revision, { ...e.data, approved }); this.store.audit(p, e.brandId, 'knowledge.approval', e.id, { approved }); return updated; }
     saveCampaign(p, brandId, b, campaignId) { requireRole(p, 'editor'); p = this.scope(p, brandId); noSecrets(b); const startAt = new Date(timestamp(b.startAt)).toISOString(), endAt = new Date(timestamp(b.endAt)).toISOString(); assert(startAt < endAt, 'DATES', 'Fine campagna deve seguire inizio'); const data = { name: text(b.name, 'nome', 200), objective: text(b.objective, 'obiettivo', 3000), brief: text(b.brief ?? '', 'brief', 10000, true), startAt, endAt, active: b.active !== false }; const old = campaignId ? this.store.get(p, campaignId, 'campaign') : undefined; return old ? this.store.update(p, old.id, Number(b.revision), data) : this.store.create(p, brandId, 'campaign', data); }
     savePrompt(p, brandId, b) {
         requireRole(p, 'admin');
@@ -164,7 +164,7 @@ export class Studio {
         return { title: text(b.title ?? '', 'titolo', 300, true), text: text(b.text ?? '', 'testo', 65000, true), hashtags: strings(b.hashtags ?? [], 'hashtag', 30), platform: a.data.platform, format: b.format, accountId: a.id, objective: text(b.objective ?? '', 'obiettivo', 3000, true), campaignId: b.campaignId || undefined, media, options, sourceIds: strings(b.sourceIds ?? [], 'fonti', 100), claims, status: 'DRAFT' };
     }
     saveContent(p, brandId, b, contentId) {
-        requireRole(p, 'editor');
+        assert(p.role === 'admin' || p.role === 'approver' || p.role === 'editor' || hasPermission(this.store, p, 'content.create') || hasPermission(this.store, p, 'content.edit'), 'FORBIDDEN', 'Permesso insufficiente', 403);
         p = this.scope(p, brandId);
         const old = contentId ? this.content(p, contentId) : undefined;
         if (old)
@@ -261,7 +261,7 @@ export class Studio {
         return result;
     }
     approve(p, contentId, revision, options = {}) {
-        requireRole(p, 'approver');
+        assert(p.role === 'admin' || p.role === 'approver' || hasPermission(this.store, p, 'content.approve'), 'FORBIDDEN', 'Permesso insufficiente per approvare', 403);
         requireHuman(p);
         let e = this.content(p, contentId);
         assert(MUTABLE.includes(e.data.status), 'STATE', 'Contenuto non approvabile');
@@ -284,7 +284,7 @@ export class Studio {
         return saved;
     }
     schedule(p, contentId, revision, at) {
-        requireRole(p, 'editor');
+        assert(p.role === 'admin' || p.role === 'approver' || hasPermission(this.store, p, 'content.publish'), 'FORBIDDEN', 'Permesso insufficiente per pubblicare', 403);
         const e = this.content(p, contentId);
         assert(e.data.status === 'APPROVED' && e.data.approval, 'APPROVAL', 'Approvazione necessaria');
         assert(e.revision === revision, 'CONFLICT', 'Versione modificata', 409);

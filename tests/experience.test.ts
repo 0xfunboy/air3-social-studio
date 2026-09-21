@@ -6,6 +6,7 @@ import type { AddressInfo } from 'node:net';
 import { readFile, stat, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createApp } from '../src/api/server.js';
+import { hasPermission, requirePermission, getMemberPermissions } from '../src/core/auth.js';
 import { ENV_FIELDS } from '../src/core/settings.js';
 import { decrypt, encrypt, hmac, passwordValid } from '../src/core/crypto.js';
 import { sha, id, now } from '../src/core/util.js';
@@ -177,3 +178,53 @@ for (const provider of ['reddit', 'discord', 'mastodon'])
 test('WhatsApp OAuth resolves owned WABA phone number IDs instead of treating numbers as targets', async (t) => { const f = await setup(t), g = grant(f, 'meta', 'whatsapp'); f.http.handler = url => url.includes('/oauth/access_token') ? response({ access_token: 'user-token' }) : url.includes('/me/businesses') ? response({ data: [{ id: 'biz1' }] }) : url.includes('/owned_whatsapp_business_accounts') ? response({ data: [{ id: 'waba1' }] }) : response({ data: [{ id: 'phone-id1', display_phone_number: '+39 000', verified_name: 'Brand' }] }); const r = await f.oauth.callback(g.req, 'meta', g.callback), v = f.oauth.publicGrant(f.p, r.grantId); assert.equal(v.candidates[0].targetId, 'phone-id1'); const a = f.oauth.select(f.p, r.grantId, [v.candidates[0].key])[0]!; assert.equal(a.data.options.wabaId, 'waba1'); });
 test('LinkedIn Page OAuth discovers only organizations returned by the approved admin ACL request', async (t) => { const f = await setup(t), g = grant(f, 'linkedin', 'linkedin-page'); f.http.handler = (url, init) => { if (url.endsWith('/accessToken'))
     return response({ access_token: 'token' }); assert.equal(new Headers(init.headers).get('LinkedIn-Version'), f.cfg.linkedinVersion); return url.includes('/organizationAcls') ? response({ elements: [{ organization: 'urn:li:organization:42' }] }) : response({ localizedName: 'Studio company' }); }; const r = await f.oauth.callback(g.req, 'linkedin', g.callback); assert.equal(f.oauth.publicGrant(f.p, r.grantId).candidates[0].targetId, 'urn:li:organization:42'); });
+test('Google auto-onboarding registers new user as viewer, verified, and strictly isolated from site admins', async (t) => {
+    const f = await setup(t);
+    f.settings.save(f.p, { GOOGLE_CLIENT_ID: 'google-client', GOOGLE_CLIENT_SECRET: 'google-secret' });
+    const start = f.identity.googleStart(undefined);
+    const u = new URL(start.url), sid = sha(u.searchParams.get('state')!);
+    const row = f.store.db.prepare('SELECT * FROM oauth_states WHERE id=?').get(sid) as Bag;
+    const data = decrypt<Bag>(row.data, f.cfg.masterKey, 'oauth:' + sid);
+    f.http.handler = url => url.includes('/certs')
+        ? response({ keys: [jwk] })
+        : response({ id_token: jwt({ email: 'newcolleague@example.test', sub: 'new-google-sub-456', nonce: data.nonce }) });
+    const req = browser(f, start.cookie.split(';')[0]);
+    const callback = new URL(f.cfg.baseUrl + '/oauth/google/callback?code=grant&state=' + u.searchParams.get('state'));
+    const result = await f.identity.googleCallback(req, callback);
+    assert.equal(result.linked, false);
+    assert(result.cookie.includes('smm_session='));
+    const newUser = f.store.db.prepare('SELECT * FROM users WHERE email=?').get('newcolleague@example.test') as Bag;
+    assert(newUser);
+    assert.equal(f.auth.siteAdmin(newUser.id), false);
+    const userWorkspaces = f.auth.workspaces(newUser.id);
+    assert.equal(userWorkspaces.length, 1);
+    assert.equal(userWorkspaces[0]!.role, 'viewer');
+    const flags = f.store.db.prepare('SELECT * FROM user_flags WHERE user_id=?').get(newUser.id) as Bag;
+    assert.equal(flags.verified, 1);
+    assert.equal(flags.disabled, 0);
+});
+test('Granular permissions enforce custom rights and allow explicit assignment by workspace admin', async (t) => {
+    const f = await setup(t);
+    const uid = f.auth.addUser(f.p, 'collaborator@example.test', 'super-strong-password-1', 'viewer');
+    const memberPrincipal: Principal = { ...f.p, userId: uid, role: 'viewer' };
+    assert.equal(hasPermission(f.store, memberPrincipal, 'content.publish'), false);
+    assert.throws(() => requirePermission(f.store, memberPrincipal, 'content.publish'), /Permesso/);
+    f.store.db.prepare('INSERT INTO member_permissions VALUES (?,?,?) ON CONFLICT(workspace_id,user_id) DO UPDATE SET permissions=excluded.permissions').run(f.p.workspaceId, uid, JSON.stringify(['content.publish', 'content.create']));
+    const perms = getMemberPermissions(f.store, f.p.workspaceId, uid, 'viewer');
+    assert.deepEqual(perms.sort(), ['content.create', 'content.publish']);
+    assert.equal(hasPermission(f.store, memberPrincipal, 'content.publish'), true);
+    assert.equal(hasPermission(f.store, memberPrincipal, 'content.approve'), false);
+    assert.doesNotThrow(() => requirePermission(f.store, memberPrincipal, 'content.publish'));
+    assert.throws(() => requirePermission(f.store, memberPrincipal, 'content.approve'), /Permesso/);
+});
+test('Strict boundary prevents non-site-admins from reading or modifying env secrets', async (t) => {
+    const f = await setup(t);
+    const uid = f.auth.addUser(f.p, 'teamlead@example.test', 'super-strong-password-2', 'admin');
+    const teamLeadPrincipal: Principal = { ...f.p, userId: uid, role: 'admin' };
+    assert.throws(() => f.settings.read(teamLeadPrincipal), /installazione/);
+    assert.throws(() => f.settings.save(teamLeadPrincipal, { LLM_API_KEY: 'hacked' }), /installazione/);
+    assert.equal(f.auth.siteAdmin(uid), false);
+    assert.equal(f.auth.siteAdmin(f.p.userId), true);
+});
+
+

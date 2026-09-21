@@ -899,7 +899,7 @@ finally {
 } }; }
 const authError = '<div class="form-error" id="auth-error" role="alert"></div>';
 function loginView() { state.me = null; if (location.pathname === '/app')
-    history.replaceState({}, '', '/login'); const err = new URLSearchParams(location.search).get('error'); authLayout(t('welcomeBack'), t('signInSub'), `<form id="auth-form" class="form">${field('email', 'Email', '', 'email', 'required autocomplete="username"')}${field('password', 'Password', '', 'password', 'required autocomplete="current-password"')}<div class="login-links"><label class="check"><input type="checkbox" data-password-toggle>${t('showPw')}</label><a href="/forgot">${t('forgotPw')}</a></div>${authError}<button class="btn primary full large" type="submit">${t('enterStudio')} ${icon('arrow')}</button></form><div class="divider"><span>${t('orDivider')}</span></div>${button(googleMark() + ' ' + t('googleBtn'), 'google-login', 'full google-btn', !publicConfig.google ? 'disabled title="' + esc(t('googleDisabledTitle')) + '"' : '')}<p class="microcopy">${publicConfig.google ? t('googleDescOn') : t('googleDescOff')}</p><p class="auth-bottom">${publicConfig.registration ? '<a href="/register">' + t('regOpen') + '</a>' : t('regInvite')}</p><p class="microcopy"><a href="/privacy">' + t('privacy') + '</a> · <a href="/terms">' + t('terms') + '</a></p>`); if (err)
+    history.replaceState({}, '', '/login'); const err = new URLSearchParams(location.search).get('error'); authLayout(t('welcomeBack'), t('signInSub'), `<form id="auth-form" class="form">${field('email', 'Email', '', 'email', 'required autocomplete="username"')}${field('password', 'Password', '', 'password', 'required autocomplete="current-password"')}<div class="login-links"><label class="check"><input type="checkbox" data-password-toggle>${t('showPw')}</label><a href="/forgot">${t('forgotPw')}</a></div>${authError}<button class="btn primary full large" type="submit">${t('enterStudio')} ${icon('arrow')}</button></form><div class="divider"><span>${t('orDivider')}</span></div>${button(googleMark() + ' ' + t('googleBtn'), 'google-login', 'full google-btn', !publicConfig.google ? 'disabled title="' + esc(t('googleDisabledTitle')) + '"' : '')}<p class="microcopy">${publicConfig.google ? t('googleDescOn') : t('googleDescOff')}</p><p class="auth-bottom">${publicConfig.registration ? '<a href="/register">' + t('regOpen') + '</a>' : t('regInvite')}</p><p class="microcopy"><a href="/privacy">${esc(t('privacy'))}</a> · <a href="/terms">${esc(t('terms'))}</a></p>`); if (err)
     $('#auth-error').textContent = oauthError(err); authFormBind(async (f) => { const r = await api('/api/login', 'POST', f); state.csrf = r.csrf; state.workspace = r.workspaces[0]?.id || ''; state.me = await api('/api/me'); location.assign('/app'); }); }
 function oauthError(code) {
     const isIt = currentLang === 'it';
@@ -1386,6 +1386,16 @@ function adminPage() {
         button(icon('code') + ' ' + (isIt ? 'Anteprima .env' : '.env preview'), 'env-preview') + button(icon('download') + ' ' + (isIt ? 'Esporta .env' : 'Export .env'), 'env-export')
     ) + (installation?.pendingRestart ? `<div class="callout warning">${isIt ? 'La URL pubblica è stata modificata. Riavvia il servizio per attivarla e aggiorna i redirect autorizzati nei provider.' : 'The public URL has been modified. Restart the service to activate it and update authorized redirects in providers.'}</div>` : '') + `<div class="admin-metrics"><span>${icon('team')}<b>${siteData?.users?.length || 0}</b> ${isIt ? 'utenti' : 'users'}</span><span>${icon('accounts')}<b>${siteData?.counts?.workspaces || 0}</b> ${isIt ? 'workspace' : 'workspaces'}</span><span>${icon('knowledge')}<b>${siteData?.counts?.brands || 0}</b> ${isIt ? 'brand' : 'brands'}</span><span>${icon('lock')} ${isIt ? 'Segreti cifrati a riposo' : 'Secrets encrypted at rest'}</span></div><div class="settings-tabs" role="tablist" aria-label="${isIt ? 'Impostazioni installazione' : 'Installation settings'}">${Object.entries(groups).map(([k, t]) => `<button class="${installGroup === k ? 'active' : ''}" role="tab" aria-selected="${installGroup === k}" data-action="env-group" data-id="${k}">${t}</button>`).join('')}</div><section class="panel admin-config"><div class="panel-head"><h2>${groups[installGroup]}</h2><span class="badge">${isIt ? 'Installazione' : 'Installation'}</span></div><div class="panel-body">${installGroup === 'oauth' ? sharedAppsPage() : envForm(installGroup)}</div></section><section class="panel section-space"><div class="panel-head"><h2>${isIt ? 'Utenti del servizio' : 'Service Users'}</h2><a href="#team">${isIt ? 'Gestisci il team' : 'Manage team'} ${icon('arrow')}</a></div><div class="table-wrap"><table><thead><tr><th>${isIt ? 'Email' : 'Email'}</th><th>${isIt ? 'Verifica' : 'Verification'}</th><th>${isIt ? 'Accesso' : 'Access'}</th><th></th></tr></thead><tbody>${(siteData?.users || []).map(u => `<tr><td><b>${esc(u.email)}</b>${u.site_admin ? ' <span class="badge">Site admin</span>' : ''}</td><td>${u.verified ? (isIt ? 'Email verificata' : 'Email verified') : (isIt ? 'In attesa' : 'Pending')}</td><td>${u.disabled ? (isIt ? 'Disabilitato' : 'Disabled') : (isIt ? 'Attivo' : 'Active')}</td><td>${!u.site_admin ? button(u.disabled ? (isIt ? 'Riabilita' : 'Enable') : (isIt ? 'Disabilita' : 'Disable'), 'site-user', u.disabled ? 'small' : 'small danger', dataId(u.id) + ' data-disabled="' + u.disabled + '"') : ''}</td></tr>`).join('')}</tbody></table></div></section><section class="panel section-space"><div class="panel-head"><h2>${isIt ? 'Audit amministrativo' : 'Administrative Audit'}</h2><span class="microcopy">${isIt ? 'Ultime 100 operazioni dell’installazione' : 'Last 100 installation operations'}</span></div>${siteData?.audit?.length ? `<div class="audit-list">${siteData.audit.slice(0, 15).map(e => `<div>${icon('jobs')}<b>${esc(e.action)}</b><span>${time(e.at)}</span></div>`).join('')}</div>` : empty(isIt ? 'Nessuna operazione amministrativa' : 'No administrative operations', isIt ? 'Le modifiche di configurazione verranno registrate qui.' : 'Configuration changes will be recorded here.')}</section>`;
 }
+const PERM_DEFS = [
+    ['content.create', 'Crea contenuti e AI', 'Create drafts & AI'],
+    ['content.edit', 'Modifica bozze', 'Edit drafts'],
+    ['content.approve', 'Approva contenuti', 'Approve versions'],
+    ['content.publish', 'Pubblica e programma', 'Publish & schedule'],
+    ['media.upload', 'Upload media e asset', 'Upload media assets'],
+    ['knowledge.manage', 'Gestione knowledge', 'Manage knowledge'],
+    ['knowledge.approve', 'Approva knowledge', 'Approve knowledge'],
+    ['accounts.manage', 'Gestione canali social', 'Manage social accounts']
+];
 function teamPage() {
     const isIt = currentLang === 'it';
     const roleDefs = isIt ? [
@@ -1403,7 +1413,15 @@ function teamPage() {
         isIt ? 'Le persone, al centro.' : 'People, at the center.',
         isIt ? 'Ruoli espliciti. Inviti monouso. Ogni membro accede solo ai propri workspace.' : 'Explicit roles. Single-use invites. Each member accesses only their workspaces.',
         button(icon('plus') + ' ' + (isIt ? 'Invita una persona' : 'Invite a member'), 'invite-user', 'primary')
-    ) + `<div class="two-col"><section class="panel"><div class="panel-head"><h2>${isIt ? 'Il tuo team' : 'Your team'}</h2><span class="badge">${teamData.length} ${isIt ? 'membri' : 'members'}</span></div><div class="team-list">${teamData.map(u => `<div><span class="avatar">${esc(u.email.slice(0, 2).toUpperCase())}</span><span><b>${esc(u.email)}</b><small>${esc(u.role)}${u.id === state.me.principal.userId ? (isIt ? ' · tu' : ' · you') : ''}</small></span><div class="actions">${button(isIt ? 'Ruolo' : 'Role', 'member-role', 'small', dataId(u.id))}${u.id !== state.me.principal.userId ? button(isIt ? 'Rimuovi' : 'Remove', 'member-remove', 'small danger', dataId(u.id)) : ''}</div></div>`).join('')}</div></section><section class="panel"><div class="panel-head"><h2>${isIt ? 'Inviti in attesa' : 'Pending invites'}</h2><span class="badge">${invitationData.length}</span></div>${invitationData.length ? `<div class="invite-list">${invitationData.map(x => `<div><span><b>${esc(x.email)}</b><small>${esc(x.role)} · ${isIt ? 'scade' : 'expires'} ${time(new Date(x.expires).toISOString())}</small></span>${button(isIt ? 'Revoca' : 'Revoke', 'invite-revoke', 'small danger', dataId(x.id))}</div>`).join('')}</div>` : empty(isIt ? 'Il team può crescere' : 'Team can grow', isIt ? 'Invita una persona via email o condividi il link monouso in modo sicuro.' : 'Invite someone via email or share the single-use link securely.')}</section></div><section class="role-grid section-space">${roleDefs.map(([r, t, d]) => `<article class="feature-card"><span class="badge">${r}</span><h3>${t}</h3><p>${d}</p></article>`).join('')}</section><div class="callout section-space">${isIt ? 'Un amministratore di workspace non può leggere o modificare i segreti dell’installazione. I privilegi di site admin sono assegnati dall’operatore sul server.' : 'A workspace administrator cannot read or modify installation secrets. Site admin privileges are assigned by the server operator.'}</div>`;
+    ) + `<div class="two-col"><section class="panel"><div class="panel-head"><h2>${isIt ? 'Il tuo team' : 'Your team'}</h2><span class="badge">${teamData.length} ${isIt ? 'membri' : 'members'}</span></div><div class="team-list">${teamData.map(u => {
+        const userPerms = (Array.isArray(u.permissions) ? u.permissions : []).filter(p => p !== '*');
+        const permBadges = userPerms.length ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">${userPerms.map(p => {
+            const d = PERM_DEFS.find(x => x[0] === p);
+            const label = d ? (isIt ? d[1] : d[2]) : p;
+            return `<span class="badge tint-teal" style="font-size:9px;padding:2px 6px;">+ ${esc(label)}</span>`;
+        }).join('')}</div>` : '';
+        return `<div><span class="avatar">${esc(u.email.slice(0, 2).toUpperCase())}</span><span><b>${esc(u.email)}</b><small><span class="badge ${u.role === 'admin' ? 'tint-coral' : u.role === 'approver' ? 'tint-amber' : u.role === 'editor' ? 'tint-blue' : ''}">${esc(u.role)}</span>${u.id === state.me.principal.userId ? (isIt ? ' · tu' : ' · you') : ''}</small>${permBadges}</span><div class="actions">${button(isIt ? 'Ruolo & Permessi' : 'Role & Perms', 'member-role', 'small', dataId(u.id))}${u.id !== state.me.principal.userId ? button(isIt ? 'Rimuovi' : 'Remove', 'member-remove', 'small danger', dataId(u.id)) : ''}</div></div>`;
+    }).join('')}</div></section><section class="panel"><div class="panel-head"><h2>${isIt ? 'Inviti in attesa' : 'Pending invites'}</h2><span class="badge">${invitationData.length}</span></div>${invitationData.length ? `<div class="invite-list">${invitationData.map(x => `<div><span><b>${esc(x.email)}</b><small>${esc(x.role)} · ${isIt ? 'scade' : 'expires'} ${time(new Date(x.expires).toISOString())}</small></span>${button(isIt ? 'Revoca' : 'Revoke', 'invite-revoke', 'small danger', dataId(x.id))}</div>`).join('')}</div>` : empty(isIt ? 'Il team può crescere' : 'Team can grow', isIt ? 'Invita una persona via email o condividi il link monouso in modo sicuro.' : 'Invite someone via email or share the single-use link securely.')}</section></div><section class="role-grid section-space">${roleDefs.map(([r, t, d]) => `<article class="feature-card"><span class="badge">${r}</span><h3>${t}</h3><p>${d}</p></article>`).join('')}</section><div class="callout section-space">${isIt ? 'Un amministratore di workspace non può leggere o modificare i segreti dell’installazione. I privilegi di site admin sono assegnati dall’operatore sul server.' : 'A workspace administrator cannot read or modify installation secrets. Site admin privileges are assigned by the server operator.'}</div>`;
 }
 function settingsPage() {
     const isIt = currentLang === 'it';
@@ -1756,10 +1774,26 @@ async function action(name, idValue, el) {
     }
     if (name === 'member-role') {
         const u = teamData.find(x => x.id === idValue);
-        return form(isIt ? 'Ruolo nel workspace' : 'Workspace role', u.email, select('role', isIt ? 'Ruolo' : 'Role', ['viewer', 'editor', 'approver', 'admin'], u.role), async (f) => {
-            await api('/api/admin/members/' + idValue, 'PUT', f);
+        const userPerms = Array.isArray(u.permissions) ? u.permissions : [];
+        const permsHtml = `
+            <div class="field" style="margin-top:12px;">
+                <label style="font-weight:600;margin-bottom:6px;display:block;">${isIt ? 'Diritti personalizzati aggiuntivi' : 'Additional custom rights'}</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px;background:var(--surface-2);border-radius:8px;border:1px solid var(--line-soft);">
+                    ${PERM_DEFS.map(([k, itL, enL]) => `
+                        <label class="check" style="font-size:11px;margin:0;cursor:pointer;">
+                            <input type="checkbox" name="permissions" value="${k}" ${userPerms.includes(k) ? 'checked' : ''}>
+                            <span>${isIt ? itL : enL}</span>
+                        </label>
+                    `).join('')}
+                </div>
+                <small class="microcopy" style="margin-top:6px;">${isIt ? 'I diritti personalizzati estendono i permessi del ruolo base.' : 'Custom rights supplement base role permissions.'}</small>
+            </div>
+        `;
+        return form(isIt ? 'Ruolo e permessi nel workspace' : 'Workspace role & permissions', u.email, select('role', isIt ? 'Ruolo base' : 'Base role', ['viewer', 'editor', 'approver', 'admin'], u.role) + permsHtml, async (f, fd) => {
+            const permissions = fd ? fd.getAll('permissions') : [];
+            await api('/api/admin/members/' + idValue, 'PUT', { role: f.role, permissions });
             state.me = await api('/api/me');
-            toast(isIt ? 'Ruolo aggiornato' : 'Role updated');
+            toast(isIt ? 'Ruolo e diritti aggiornati' : 'Role and permissions updated');
         });
     }
     if (name === 'member-remove')

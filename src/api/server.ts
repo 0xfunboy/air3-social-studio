@@ -5,7 +5,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { Studio, publicAccount } from '../core/service.js';
-import { Auth, requireRole, requireHuman } from '../core/auth.js';
+import { Auth, requireRole, requireHuman, hasPermission } from '../core/auth.js';
 import { AppError, assert, id, now, object, safeError, text, strings } from '../core/util.js';
 import type { Account, Bag, Content, Knowledge, Principal } from '../core/types.js';
 import { CAPABILITIES } from '../social/capabilities.js';
@@ -174,7 +174,12 @@ export function createApp(studio: Studio, auth: Auth, webRoot = resolve('web')):
                     requireRole(p, 'admin');
                     requireHuman(p);
                     if (method === 'GET') {
-                        send(res, studio.store.db.prepare('SELECT u.id,u.email,m.role FROM users u JOIN memberships m ON m.user_id=u.id WHERE m.workspace_id=?').all(p.workspaceId));
+                        const rows = studio.store.db.prepare('SELECT u.id,u.email,m.role,COALESCE(mp.permissions,"[]") as permissions FROM users u JOIN memberships m ON m.user_id=u.id LEFT JOIN member_permissions mp ON mp.workspace_id=m.workspace_id AND mp.user_id=u.id WHERE m.workspace_id=?').all(p.workspaceId) as Bag[];
+                        send(res, rows.map(r => {
+                            let perms: string[] = [];
+                            try { perms = JSON.parse(r.permissions); } catch {}
+                            return { id: r.id, email: r.email, role: r.role, permissions: Array.isArray(perms) ? perms : [] };
+                        }));
                         return;
                     }
                     if (method === 'POST') {

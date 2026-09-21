@@ -204,14 +204,22 @@ export class ExperienceApi {
             requireHuman(p);
             const uid = member[1], b = method === 'PUT' ? await body(req) : {}, old = this.studio.store.db.prepare('SELECT role FROM memberships WHERE user_id=? AND workspace_id=?').get(uid, p.workspaceId);
             assert(old, 'NOT_FOUND', 'Membro non trovato', 404);
-            assert(method !== 'PUT' || ['viewer', 'editor', 'approver', 'admin'].includes(b.role), 'ROLE', 'Ruolo non valido');
+            const newRole = b.role ?? old.role;
+            assert(['viewer', 'editor', 'approver', 'admin'].includes(newRole), 'ROLE', 'Ruolo non valido');
             const admins = this.studio.store.db.prepare("SELECT count(*) n FROM memberships WHERE workspace_id=? AND role='admin'").get(p.workspaceId);
-            assert(!(old.role === 'admin' && admins.n === 1 && (method === 'DELETE' || b.role !== 'admin')), 'LAST_ADMIN', 'Non puoi rimuovere l’ultimo amministratore');
-            if (method === 'DELETE')
+            assert(!(old.role === 'admin' && admins.n === 1 && (method === 'DELETE' || newRole !== 'admin')), 'LAST_ADMIN', 'Non puoi rimuovere l’ultimo amministratore');
+            if (method === 'DELETE') {
                 this.studio.store.db.prepare('DELETE FROM memberships WHERE user_id=? AND workspace_id=?').run(uid, p.workspaceId);
-            else
-                this.studio.store.db.prepare('UPDATE memberships SET role=? WHERE user_id=? AND workspace_id=?').run(b.role, uid, p.workspaceId);
-            this.studio.store.audit(p, '', 'member.updated', uid, { role: b.role ?? 'removed' });
+                this.studio.store.db.prepare('DELETE FROM member_permissions WHERE user_id=? AND workspace_id=?').run(uid, p.workspaceId);
+            }
+            else {
+                this.studio.store.db.prepare('UPDATE memberships SET role=? WHERE user_id=? AND workspace_id=?').run(newRole, uid, p.workspaceId);
+                if (Array.isArray(b.permissions)) {
+                    const cleanPerms = b.permissions.filter((x) => typeof x === 'string' && x.length <= 50);
+                    this.studio.store.db.prepare('INSERT INTO member_permissions VALUES (?,?,?) ON CONFLICT(workspace_id,user_id) DO UPDATE SET permissions=excluded.permissions').run(p.workspaceId, uid, JSON.stringify(cleanPerms));
+                }
+            }
+            this.studio.store.audit(p, '', 'member.updated', uid, { role: method === 'DELETE' ? 'removed' : newRole, permissions: b.permissions ?? null });
             send(res, { ok: true });
             return true;
         }

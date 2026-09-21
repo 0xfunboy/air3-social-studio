@@ -166,11 +166,15 @@ export class Identity {
                 return userId;
             }
             assert(!existing, 'GOOGLE_LINK_REQUIRED', 'Esiste già un account con questa email. Accedi con password e collega Google dalle impostazioni.', 409);
-            assert(this.settings.value('ALLOW_REGISTRATION') === 'true', 'REGISTRATION_CLOSED', 'Account non collegato. Richiedi un invito, accedi e collega Google.', 403);
-            const userId = id(), wid = id();
+            const userId = id();
+            const defaultWorkspace = db.prepare('SELECT id FROM workspaces ORDER BY rowid ASC LIMIT 1').get() as Bag | undefined;
+            const wid = defaultWorkspace?.id || id();
             db.prepare('INSERT INTO users VALUES (?,?,?,?)').run(userId, email, passwordHash(randomBytes(48).toString('base64url')), now());
-            db.prepare('INSERT INTO workspaces VALUES (?,?)').run(wid, 'Il mio studio');
-            db.prepare('INSERT INTO memberships VALUES (?,?,?)').run(userId, wid, 'admin');
+            db.prepare('INSERT OR IGNORE INTO user_flags VALUES (?,1,0)').run(userId);
+            if (!defaultWorkspace) {
+                db.prepare('INSERT INTO workspaces VALUES (?,?)').run(wid, 'Il mio studio');
+            }
+            db.prepare('INSERT OR IGNORE INTO memberships VALUES (?,?,?)').run(userId, wid, 'viewer');
             db.prepare("INSERT INTO identities VALUES ('google',?,?,?)").run(claims.sub, userId, email);
             return userId;
         });
