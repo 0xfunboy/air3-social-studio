@@ -22,18 +22,28 @@ git remote remove origin
 gh repo create 0xfunboy/air3-social-studio --public --source=. --remote=origin --push
 ```
 
-## Cloudflare Zero Trust Tunnel (`smair.eeess.cyou`)
+## Ingress HTTPS & Reverse Proxy
 
-Il tunnel Cloudflare instrada il traffico HTTPS sicuro dal sottodominio `smair.eeess.cyou` al servizio locale in ascolto su `http://127.0.0.1:3100` senza aprire porte sul firewall perimetrale:
+Il traffico HTTPS sicuro verso il servizio in ascolto su `http://127.0.0.1:3100` può essere terminato tramite un reverse proxy (ad esempio Caddy o NGINX) o ingress gateway protetto:
 
-```bash
-# Creazione e routing del tunnel con certificato origine
-cloudflared tunnel --origincert /home/funboy/.cloudflared/cert-eeess.pem create smair
-cloudflared tunnel --origincert /home/funboy/.cloudflared/cert-eeess.pem route dns --overwrite-dns smair smair.eeess.cyou
+```caddy
+# Esempio Caddyfile per terminazione automatica TLS
+studio.yourdomain.com {
+    reverse_proxy 127.0.0.1:3100
+}
+```
 
-# Avvio del tunnel in background con configurazione dedicata
-cloudflared tunnel --config /home/funboy/.cloudflared/config-smair.yml run smair
+Oppure con NGINX:
+```nginx
+server {
+    server_name studio.yourdomain.com;
+    location / {
+        proxy_pass http://127.0.0.1:3100;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
 ```
 
 La CI inclusa esegue compilazione e test su Node 22 con dipendenze npm offline e verifica zero-leakage dei secret.
-

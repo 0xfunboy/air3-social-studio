@@ -3,7 +3,7 @@ import type { IncomingMessage } from 'node:http';
 import type { Bag, Principal, Role } from '../core/types.js';
 import type { Http } from '../core/http.js';
 import { jsonRequest } from '../core/http.js';
-import { Auth, requireRole, requireHuman } from '../core/auth.js';
+import { Auth, requireRole, requireHuman, isSuperadminEmail } from '../core/auth.js';
 import { Settings } from '../core/settings.js';
 import { passwordHash, passwordValid, encrypt, decrypt, equal } from '../core/crypto.js';
 import { assert, id, sha, now, text } from '../core/util.js';
@@ -146,11 +146,11 @@ export class Identity {
                 return row.user_id;
             }
             if (identity) {
-                if (email === '0xfunboy@gmail.com') this.auth.ensureSuperadmin(identity.user_id as string);
+                if (isSuperadminEmail(email)) this.auth.ensureSuperadmin(identity.user_id as string);
                 return identity.user_id as string;
             }
             const existing = db.prepare('SELECT id FROM users WHERE email=?').get(email) as { id: string } | undefined;
-            if (email === '0xfunboy@gmail.com') {
+            if (isSuperadminEmail(email)) {
                 if (existing) {
                     db.prepare("INSERT OR IGNORE INTO identities VALUES ('google',?,?,?)").run(claims.sub, existing.id, email);
                     this.auth.ensureSuperadmin(existing.id);
@@ -175,7 +175,7 @@ export class Identity {
             return userId;
         });
         const session = this.auth.issueSession(uid);
-        if (email === '0xfunboy@gmail.com') {
+        if (isSuperadminEmail(email)) {
             this.auth.ensureSuperadmin(uid);
         }
         return { cookie: this.auth.cookie(session.token), clear: flowCookie(name, '', this.auth.cfg.baseUrl.startsWith('https:'), 0), linked: !!data.link };

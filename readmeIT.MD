@@ -8,9 +8,8 @@
 </p>
 
 <p align="center">
-  <a href="https://smair.eeess.cyou"><strong>🌐 Live Studio (Cloudflare)</strong></a> ·
+  <a href="#quickstart"><strong>🚀 Quickstart</strong></a> ·
   <a href="#at-a-glance">At a glance</a> ·
-  <a href="#quickstart">Quickstart</a> ·
   <a href="#superadmin-access">Superadmin</a> ·
   <a href="#architecture">Architecture</a> ·
   <a href="#multi-agent-system">AI Agents</a> ·
@@ -26,7 +25,7 @@
   <img src="https://img.shields.io/badge/Tests-115%20TAP%20Passed-blue?style=flat-square" alt="Tests">
   <img src="https://img.shields.io/badge/Runtime-Node.js%2022.16%2B-forestgreen?style=flat-square" alt="Node 22">
   <img src="https://img.shields.io/badge/Storage-SQLite%20WAL%20Encrypted-critical?style=flat-square" alt="SQLite WAL">
-  <img src="https://img.shields.io/badge/Ingress-Cloudflare%20Tunnel-orange?style=flat-square" alt="Cloudflare">
+  <img src="https://img.shields.io/badge/Ingress-HTTPS%20Reverse%20Proxy-orange?style=flat-square" alt="Reverse Proxy">
   <img src="https://img.shields.io/badge/License-0xfunboy%20Non--Commercial%20v1.1-purple?style=flat-square" alt="License">
 </p>
 
@@ -47,8 +46,8 @@ Unlike disjointed SaaS platforms or fragile wrapper scripts, AIR3 Social Studio 
 - **Autonomous Multi-Agent Council** — Six specialized AI agents (Strategist, Copywriter, Creative Director, Reviewer, Analyst, Planner) collaborate, debate, and refine content against strict brand guidelines before human sign-off.
 - **Deterministic Brand RAG Engine** — Hybrid lexical (FTS5) and dense semantic embedding retrieval (BGE-M3 / OpenAI / Gemini) grounding every generated post in validated brand guidelines and official assets.
 - **Centralized Social Hub & Direct OAuth** — Native integration with 20 channel types across 12 social families (LinkedIn, X/Twitter, Meta/Instagram/Threads, YouTube, TikTok, Pinterest, Bluesky, Farcaster, Telegram, Discord, and Postiz).
-- **Automated Superadmin Provisioning** — Built-in enterprise role delegation granting full administrative autonomy, multi-workspace governance, and audit visibility to `0xfunboy@gmail.com`.
-- **Cloudflare Zero Trust Ingress** — Pre-configured, certificate-backed Cloudflare Tunnel terminating securely at `https://smair.eeess.cyou` with no open inbound firewall ports.
+- **Automated Superadmin Provisioning** — Ruolo di amministratore globale e multi-workspace assegnato all'indirizzo configurato in `.env` (`SUPERADMIN_EMAIL`).
+- **Terminazione TLS & Ingress HTTPS** — Ingress sicuro via reverse proxy (Caddy / NGINX) con terminazione HTTPS e protezione firewall.
 - **Enterprise Security Isolation** — AES-256-GCM encrypted tokens at rest, strict SSRF origin verification, constant-time authentication, signed webhooks, and tamper-evident audit logging.
 
 ---
@@ -89,8 +88,6 @@ The v2.0 **Paper & Graphite** interface was designed from the ground up for clar
 
 <p align="center">
   <img src="docs/screenshots/landing-light.webp" alt="AIR3 Social Studio — Light Theme" width="65%">
-  <img src="docs/screenshots/landing-mobile.webp" alt="AIR3 Social Studio — Mobile View" width="32%">
-  <br>
   <em>Adaptive Design: Paper & Graphite light palette and responsive layout optimized for handheld devices.</em>
 </p>
 
@@ -98,83 +95,92 @@ The v2.0 **Paper & Graphite** interface was designed from the ground up for clar
 
 ## Superadmin Access
 
-AIR3 Social Studio v2.0 includes automated administrative role provisioning:
+AIR3 Social Studio v2.0 include la delega automatica del ruolo di amministratore:
 
-- **Authorized Superadmin Identity:** `0xfunboy@gmail.com`
-- **Privilege Level:** Global Installation Superadmin (`site_admins` authority) + Full Workspace Admin on all active and future workspaces.
-- **Auto-Promotion Mechanics:**
-  - **Local Authentication:** Logging in or registering with `0xfunboy@gmail.com` automatically provisions the user, sets `verified=1`, `disabled=0`, inserts into `site_admins`, and grants `admin` membership across every workspace.
-  - **Google OIDC Federation:** When signing in via Google Identity, accounts with email `0xfunboy@gmail.com` are instantly linked, verified, and promoted to Superadmin without requiring manual database intervention.
-  - **Session & Privilege Assertion:** On every session issuance and permission check, `siteAdmin()` unconditionally evaluates to `true`, providing unrestricted access to system telemetry, global OAuth credentials, audit logs, and multi-tenant workspaces.
+- **Identità Superadmin configurabile:** Imposta `SUPERADMIN_EMAIL=admin@iltuodominio.com` nel file `.env` (o tramite credenziali bootstrap).
+- **Livello di privilegio:** Superadmin Globale dell'installazione (`site_admins`) + Amministratore completo su tutti i workspace attivi e futuri.
+- **Meccanica di auto-promozione:**
+  - **Autenticazione Locale:** Il login o la registrazione con l'email configurata imposta automaticamente `verified=1`, `disabled=0`, inserisce l'utente in `site_admins` e concede il ruolo `admin` in tutti i workspace.
+  - **Federazione Google OIDC:** Al primo accesso con Google Identity, gli account corrispondenti all'email di amministrazione vengono associati, verificati e promossi a Superadmin senza interventi manuali nel database.
+  - **Verifica delle autorizzazioni:** A ogni emissione di sessione e controllo dei permessi, `siteAdmin()` restituisce `true`, sbloccando telemetria, gestione OAuth globale, audit log e workspace multi-tenant.
 
 ---
 
 ## Quickstart
 
-### 1. Prerequisites
+### 1. Prerequisiti
 
-- **OS:** Linux (Ubuntu 22.04+ / Debian 12+ recommended), macOS, or Docker
+- **OS:** Linux (Ubuntu 22.04+ / Debian 12+ consigliato), macOS, o Docker
 - **Runtime:** Node.js 22.16+ (LTS)
-- **Media Engine:** FFmpeg & ffprobe (for dynamic carousel and slideshow rendering)
-- **System Fonts:** DejaVu Sans / FreeFont (e.g. `apt-get install -y ffmpeg fonts-dejavu-core`)
+- **Media Engine:** FFmpeg & ffprobe (per render caroselli e slideshow video)
+- **Font di sistema:** DejaVu Sans / FreeFont (es. `apt-get install -y ffmpeg fonts-dejavu-core`)
 
-### 2. Local Setup & Build
+### 2. Installazione e Build Locale
 
-All build tools (`typescript`, `@types/node`) are vendored locally as offline tarballs in `vendor/`.
+Tutti i tool di compilazione (`typescript`, `@types/node`) sono inclusi offline in `vendor/`.
 
 ```bash
-# 1. Clone or navigate to the repository
+# 1. Clona o apri la directory del repository
 git clone https://github.com/0xfunboy/air3-social-studio.git
 cd air3-social-studio
 
-# 2. Link offline build dependencies & compile TypeScript
+# 2. Collega le dipendenze offline e compila TypeScript
 npm ci --offline --ignore-scripts
 npm run build
 
-# 3. Initialize configuration & generate encryption keys
-node scripts/setup.mjs --email 0xfunboy@gmail.com --url http://127.0.0.1:3100
+# 3. Inizializza la configurazione e genera le chiavi di cifratura
+node scripts/setup.mjs --email admin@iltuodominio.com --url http://127.0.0.1:3100
 
-# 4. Launch the local daemon
+# 4. Avvia il servizio
 npm start
 ```
 
-Studio binds to `http://127.0.0.1:3100`. The setup script outputs the generated Master Encryption Key and temporary initial password.
+Il server si avvia su `http://127.0.0.1:3100`. Lo script di setup visualizza la Master Key e la password temporanea iniziale.
 
 ---
 
-## Cloudflare Tunnel Ingress
+## Accesso Superadmin via Variabile d'Ambiente
 
-AIR3 Social Studio is deployed behind an encrypted Cloudflare Zero Trust Tunnel using the zone certificate `/home/funboy/.cloudflared/cert-eeess.pem`:
+Qualsiasi indirizzo specificato in `SUPERADMIN_EMAIL` nel file `.env` (oppure l'account di bootstrap iniziale) riceve automaticamente i privilegi completi di Superadmin:
 
-- **Production Endpoint:** `https://smair.eeess.cyou`
-- **Local Ingress Service:** `http://127.0.0.1:3100`
-
-### Tunnel Configuration Reference (`/home/funboy/.cloudflared/config-smair.yml`):
-
-```yaml
-tunnel: smair
-credentials-file: /home/funboy/.cloudflared/<tunnel-uuid>.json
-
-ingress:
-  - hostname: smair.eeess.cyou
-    service: http://127.0.0.1:3100
-    originRequest:
-      connectTimeout: 15s
-      noTLSVerify: false
-  - service: http_status:404
+```env
+SUPERADMIN_EMAIL=admin@iltuodominio.com
 ```
 
-### Starting the Tunnel:
+---
 
-```bash
-cloudflared tunnel --config /home/funboy/.cloudflared/config-smair.yml run smair
+## Ingress HTTPS & Reverse Proxy
+
+AIR3 Social Studio rimane in ascolto locale su `http://127.0.0.1:3100`. In produzione, esponi l'interfaccia via HTTPS usando un reverse proxy (Caddy, NGINX) o un gateway sicuro:
+
+- **Endpoint pubblico:** `https://studio.iltuodominio.com`
+- **Servizio upstream locale:** `http://127.0.0.1:3100`
+
+### Esempio Caddyfile (TLS automatico)
+```caddy
+studio.iltuodominio.com {
+    reverse_proxy 127.0.0.1:3100
+}
+```
+
+### Esempio NGINX
+```nginx
+server {
+    server_name studio.iltuodominio.com;
+    location / {
+        proxy_pass http://127.0.0.1:3100;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
 ```
 
 ---
 
 ## Architecture
 
-AIR3 Social Studio follows a modular, monolithic architecture designed for extreme reliability and zero operational overhead:
+AIR3 Social Studio segue un'architettura monolitica modulare ad alta affidabilità con zero overhead operativo:
 
 ```
                       +------------------------------------------+
@@ -182,12 +188,12 @@ AIR3 Social Studio follows a modular, monolithic architecture designed for extre
                       |   Paper & Graphite Minimalist Frontend   |
                       +--------------------+---------------------+
                                            |
-                              HTTPS / WSS (Port 443)
-                                           |
-                      +--------------------+---------------------+
-                      |      Cloudflare Zero Trust Ingress       |
-                      |          smair.eeess.cyou               |
-                      +--------------------+---------------------+
+                                HTTPS / WSS (Port 443)
+                                            |
+                       +--------------------+---------------------+
+                       |       HTTPS Ingress / Reverse Proxy      |
+                       |          studio.iltuodominio.com         |
+                       +--------------------+---------------------+
                                            |
                                 Local Loopback (Port 3100)
                                            |

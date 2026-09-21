@@ -45,7 +45,7 @@ export class Settings {
         for (const k of Object.keys(ENV_FIELDS))
             if (process.env[k] !== undefined)
                 v[k] = process.env[k];
-        return { SITE_NAME: 'AIR3 Social Studio', ALLOW_REGISTRATION: 'false', BASE_URL: this.cfg.baseUrl, SUPPORT_EMAIL: '0xfunboy@gmail.com', PRIVACY_URL: `${this.cfg.baseUrl}/privacy`, TERMS_URL: `${this.cfg.baseUrl}/terms`, ...v, ...this.persisted() };
+        return { SITE_NAME: 'AIR3 Social Studio', ALLOW_REGISTRATION: 'false', BASE_URL: this.cfg.baseUrl, SUPPORT_EMAIL: process.env.SUPPORT_EMAIL || 'support@localhost.test', PRIVACY_URL: `${this.cfg.baseUrl}/privacy`, TERMS_URL: `${this.cfg.baseUrl}/terms`, ...v, ...this.persisted() };
     }
     value(k) { return String(this.values()[k] ?? ''); }
     public() { return { name: this.value('SITE_NAME'), version: '0.2.0', google: !!(this.value('GOOGLE_CLIENT_ID') && this.value('GOOGLE_CLIENT_SECRET')), registration: this.value('ALLOW_REGISTRATION') === 'true', emailEnabled: this.mailEnabled, supportEmail: this.value('SUPPORT_EMAIL'), privacyUrl: this.value('PRIVACY_URL'), termsUrl: this.value('TERMS_URL') }; }

@@ -8,10 +8,9 @@
 </p>
 
 <p align="center">
-  <a href="https://smair.eeess.cyou"><strong>🌐 Live Studio (Cloudflare)</strong></a> ·
+  <a href="#quickstart"><strong>🚀 Quickstart</strong></a> ·
   <a href="readmeIT.MD"><strong>🇮🇹 Documentazione in Italiano (readmeIT.MD)</strong></a> ·
   <a href="#at-a-glance">At a glance</a> ·
-  <a href="#quickstart">Quickstart</a> ·
   <a href="#superadmin-access">Superadmin</a> ·
   <a href="#google-login-setup">Google Login Setup</a> ·
   <a href="#bilingual-ui">Bilingual UI</a> ·
@@ -28,7 +27,7 @@
   <img src="https://img.shields.io/badge/Tests-115%20TAP%20Passed-blue?style=flat-square" alt="Tests">
   <img src="https://img.shields.io/badge/Runtime-Node.js%2022.16%2B-forestgreen?style=flat-square" alt="Node 22">
   <img src="https://img.shields.io/badge/Storage-SQLite%20WAL%20Encrypted-critical?style=flat-square" alt="SQLite WAL">
-  <img src="https://img.shields.io/badge/Ingress-Cloudflare%20Tunnel-orange?style=flat-square" alt="Cloudflare">
+  <img src="https://img.shields.io/badge/Ingress-HTTPS%20Reverse%20Proxy-orange?style=flat-square" alt="Reverse Proxy">
   <img src="https://img.shields.io/badge/UI-Bilingual%20(IT%20%2F%20EN)-blueviolet?style=flat-square" alt="Bilingual">
   <img src="https://img.shields.io/badge/License-0xfunboy%20Non--Commercial%20v1.1-purple?style=flat-square" alt="License">
 </p>
@@ -56,8 +55,8 @@ Running entirely on your own infrastructure, AIR3 Social Studio features **zero 
 - **Autonomous Multi-Agent Council** — Six specialized AI agents (Strategist, Copywriter, Creative Director, Reviewer, Analyst, Planner) debate, refine, and enforce brand guidelines before human editorial approval.
 - **Deterministic Brand RAG Engine** — Hybrid lexical (FTS5) and dense semantic embedding retrieval (BGE-M3 / OpenAI / Gemini) grounding every post in verified corporate knowledge and brand assets.
 - **Centralized Social Hub & Direct OAuth** — Native publishing support for 20 channel types across 12 social families (LinkedIn, X/Twitter, Meta/Instagram/Threads, YouTube, TikTok, Pinterest, Bluesky, Farcaster, Telegram, Discord, and Postiz).
-- **Automated Superadmin Provisioning** — Built-in enterprise role assignment granting total administrative control, multi-workspace governance, and audit visibility to `0xfunboy@gmail.com`.
-- **Cloudflare Zero Trust Ingress** — Certificate-backed Cloudflare Tunnel terminating securely at `https://smair.eeess.cyou` with no open inbound firewall ports.
+- **Automated Superadmin Provisioning** — Built-in enterprise role assignment granting total administrative control, multi-workspace governance, and audit visibility to the designated administrator email (configurable via `SUPERADMIN_EMAIL` in `.env`).
+- **Automated TLS & HTTPS Ingress** — Secure ingress via modern reverse proxies (such as Caddy or NGINX) terminating HTTPS with zero open inbound firewall ports.
 - **Enterprise Security Isolation** — AES-256-GCM token vault encryption at rest, strict SSRF origin verification, constant-work password verification, and tamper-evident audit logs.
 
 ---
@@ -98,8 +97,6 @@ The **Paper & Graphite** interface was designed from the ground up for clarity, 
 
 <p align="center">
   <img src="docs/screenshots/landing-light.webp" alt="AIR3 Social Studio — Light Palette" width="65%">
-  <img src="docs/screenshots/landing-mobile.webp" alt="AIR3 Social Studio — Mobile View" width="32%">
-  <br>
   <em>Adaptive Design: Paper & Graphite light palette and responsive layout optimized for handheld devices.</em>
 </p>
 
@@ -109,11 +106,11 @@ The **Paper & Graphite** interface was designed from the ground up for clarity, 
 
 AIR3 Social Studio v2.0 includes automated administrative role provisioning:
 
-- **Designated Superadmin Identity:** `0xfunboy@gmail.com`
+- **Configurable Administrator Identity:** Set `SUPERADMIN_EMAIL=admin@yourdomain.com` in `.env` (or via bootstrap credentials).
 - **Privilege Level:** Global Installation Superadmin (`site_admins` authority) + Full Workspace Admin across all active and future workspaces.
 - **Auto-Promotion Mechanics:**
-  - **Local Authentication:** Logging in or registering with `0xfunboy@gmail.com` automatically provisions the user with `verified=1`, `disabled=0`, inserts into `site_admins`, and grants `admin` membership on every workspace.
-  - **Google OIDC Federation:** When signing in via Google Identity, accounts matching `0xfunboy@gmail.com` are instantly linked, verified, and elevated to Superadmin without requiring manual database intervention.
+  - **Local Authentication:** Logging in or registering with the configured admin email automatically provisions the user with `verified=1`, `disabled=0`, inserts into `site_admins`, and grants `admin` membership on every workspace.
+  - **Google OIDC Federation:** When signing in via Google Identity, accounts matching the configured admin email are instantly linked, verified, and elevated to Superadmin without requiring manual database intervention.
   - **Session & Privilege Assertion:** On every session issuance and permission check, `siteAdmin()` unconditionally evaluates to `true`, providing unrestricted access to system telemetry, global OAuth credentials, audit logs, and multi-tenant workspaces.
 
 ---
@@ -127,22 +124,22 @@ To enable **Sign in with Google** across your deployment:
 3. Click **Create Credentials → OAuth client ID** and select **Application type: Web application**.
 4. Configure the URIs:
    - **Authorized JavaScript origins:**
-     - `https://smair.eeess.cyou`
+     - `https://studio.yourdomain.com` (your public HTTPS domain)
      - *(Optional for local development)*: `http://127.0.0.1:3100`
    - **Authorized redirect URIs (Must match exactly):**
-     - `https://smair.eeess.cyou/oauth/google/callback`
+     - `https://studio.yourdomain.com/oauth/google/callback`
      - *(Optional for local development)*: `http://127.0.0.1:3100/oauth/google/callback`
 5. Save the generated **Client ID** and **Client Secret**.
 6. Supply credentials to AIR3 Social Studio using either method:
-   - **Method A (Web Dashboard):** Log in as Superadmin at `https://smair.eeess.cyou` → navigate to **Administration → Settings → Google Configuration** → enter keys and Save.
-   - **Method B (Environment File):** Add them to `/home/funboy/air3-social-studio/.env`:
+   - **Method A (Web Dashboard):** Log in as Superadmin at your deployment URL → navigate to **Administration → Google Sign-In** → enter keys and Save.
+   - **Method B (Environment File):** Add them to `.env`:
      ```env
      GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
      GOOGLE_CLIENT_SECRET=GOCSPX-your-client-secret
      ```
      and restart the server.
 
-Once configured, users can log in with a single click, and `0xfunboy@gmail.com` will immediately receive full Superadmin rights.
+Once configured, users can log in with a single click. Any address specified in `SUPERADMIN_EMAIL` (or the initial bootstrap account) automatically receives full Superadmin privileges.
 
 ---
 
@@ -173,14 +170,14 @@ All build dependencies (`typescript`, `@types/node`, `undici-types`) are vendore
 
 ```bash
 # 1. Navigate to project root
-cd /home/funboy/air3-social-studio
+cd air3-social-studio
 
 # 2. Link offline vendor dependencies & build TypeScript
 npm ci --offline --ignore-scripts
 npm run build
 
 # 3. Initialize configuration & encryption keys
-node scripts/setup.mjs --email 0xfunboy@gmail.com --url http://127.0.0.1:3100
+node scripts/setup.mjs --email admin@yourdomain.com --url http://127.0.0.1:3100
 
 # 4. Start the studio server
 npm start
@@ -190,32 +187,35 @@ Studio binds to `http://127.0.0.1:3100`. The setup script prints the generated M
 
 ---
 
-## Cloudflare Tunnel Ingress
+## HTTPS Ingress & Reverse Proxy
 
-AIR3 Social Studio is deployed behind an encrypted Cloudflare Zero Trust Tunnel using the zone certificate `/home/funboy/.cloudflared/cert-eeess.pem`:
+AIR3 Social Studio listens on loopback `http://127.0.0.1:3100`. In production, serve HTTPS using any modern reverse proxy (Caddy, NGINX) or secure gateway:
 
-- **Production Endpoint:** `https://smair.eeess.cyou`
-- **Local Loopback Target:** `http://127.0.0.1:3100`
+- **Public Endpoint:** `https://studio.yourdomain.com`
+- **Internal Upstream:** `http://127.0.0.1:3100`
 
-### Tunnel Configuration Reference (`/home/funboy/.cloudflared/config-smair.yml`):
+### Caddy (Automated TLS)
 
-```yaml
-tunnel: b7406e78-ee24-4072-b5de-4bba888e8460
-credentials-file: /home/funboy/.cloudflared/b7406e78-ee24-4072-b5de-4bba888e8460.json
-
-ingress:
-  - hostname: smair.eeess.cyou
-    service: http://127.0.0.1:3100
-    originRequest:
-      connectTimeout: 15s
-  - service: http_status:404
+```caddy
+studio.yourdomain.com {
+    reverse_proxy 127.0.0.1:3100
+}
 ```
 
-### Starting the Tunnel:
+### NGINX
 
-```bash
-cloudflared tunnel --config /home/funboy/.cloudflared/config-smair.yml run smair
+```nginx
+server {
+    server_name studio.yourdomain.com;
+    location / {
+        proxy_pass http://127.0.0.1:3100;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
 ```
+
 
 ---
 
@@ -230,11 +230,11 @@ AIR3 Social Studio follows a modular monolithic architecture engineered for reli
                       |        Bilingual Engine (IT / EN)        |
                       +--------------------+---------------------+
                                            |
-                              HTTPS / WSS (Port 443)
+                               HTTPS / WSS (Port 443)
                                            |
                       +--------------------+---------------------+
-                      |      Cloudflare Zero Trust Ingress       |
-                      |          smair.eeess.cyou               |
+                      |       HTTPS Ingress / Reverse Proxy      |
+                      |          studio.yourdomain.com           |
                       +--------------------+---------------------+
                                            |
                                 Local Loopback (Port 3100)

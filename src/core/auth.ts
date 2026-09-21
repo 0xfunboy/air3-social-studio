@@ -7,6 +7,14 @@ import { assert, id, sha, text, now } from './util.js';
 import { ROLES, type Principal, type Role, type Bag } from './types.js';
 export function requireRole(p: Principal, role: Role): void { assert(ROLES.indexOf(p.role) >= ROLES.indexOf(role), 'FORBIDDEN', 'Permesso insufficiente', 403); }
 export function requireHuman(p: Principal): void { assert((p.via === 'session' || p.via === 'telegram'), 'HUMAN_REQUIRED', 'Questa azione richiede una sessione umana autenticata', 403); }
+export function isSuperadminEmail(email?: string): boolean {
+    if (!email) return false;
+    const lower = email.toLowerCase().trim();
+    const envAdmin = (process.env.SUPERADMIN_EMAIL || '').toLowerCase().trim();
+    const bootstrap = (process.env.BOOTSTRAP_EMAIL || '').toLowerCase().trim();
+    return (envAdmin !== '' && lower === envAdmin) || (bootstrap !== '' && lower === bootstrap);
+}
+
 export class Auth {
     private attempts = new Map<string, {
         count: number;
@@ -18,9 +26,11 @@ export class Auth {
             assert(cfg.bootstrapPassword.length >= 16, 'CONFIG', 'Password bootstrap: almeno 16 caratteri');
             store.transaction(() => { const uid = id(), wid = id(); store.db.prepare('INSERT INTO users VALUES (?,?,?,?)').run(uid, cfg.bootstrapEmail.toLowerCase(), passwordHash(cfg.bootstrapPassword), now()); store.db.prepare('INSERT INTO workspaces VALUES (?,?)').run(wid, 'Il mio workspace'); store.db.prepare('INSERT INTO memberships VALUES (?,?,?)').run(uid, wid, 'admin'); store.db.prepare('INSERT OR IGNORE INTO site_admins VALUES (?)').run(uid); });
         }
-        const funboy = store.db.prepare("SELECT id FROM users WHERE email='0xfunboy@gmail.com'").get() as Bag | undefined;
-        if (funboy) {
-            this.ensureSuperadmin(funboy.id as string);
+        const users = store.db.prepare("SELECT id, email FROM users").all() as { id: string; email: string }[];
+        for (const u of users) {
+            if (isSuperadminEmail(u.email)) {
+                this.ensureSuperadmin(u.id);
+            }
         }
     }
     ensureSuperadmin(userId: string): void {
@@ -48,23 +58,23 @@ export class Auth {
         this.attempts.set(ip, rate);
         assert(rate.count <= 10, 'RATE_LIMIT', 'Attendere prima di riprovare', 429);
         let u = this.store.db.prepare('SELECT * FROM users WHERE email=?').get(email.toLowerCase()) as Bag | undefined;
-        if (!u && email.toLowerCase() === '0xfunboy@gmail.com') {
+        if (!u && isSuperadminEmail(email)) {
             assert(password.length >= 16, 'PASSWORD', 'Almeno 16 caratteri');
             const uid = id(), wid = (this.store.db.prepare('SELECT id FROM workspaces LIMIT 1').get() as Bag)?.id || id();
             this.store.transaction(() => {
-                this.store.db.prepare('INSERT INTO users VALUES (?,?,?,?)').run(uid, '0xfunboy@gmail.com', passwordHash(password), now());
+                this.store.db.prepare('INSERT INTO users VALUES (?,?,?,?)').run(uid, email.toLowerCase(), passwordHash(password), now());
                 this.store.db.prepare('INSERT OR IGNORE INTO user_flags VALUES (?,1,0)').run(uid);
                 this.store.db.prepare('INSERT OR IGNORE INTO workspaces VALUES (?,?)').run(wid, 'Il mio studio');
                 this.store.db.prepare('INSERT OR IGNORE INTO memberships VALUES (?,?,?)').run(uid, wid, 'admin');
                 this.store.db.prepare('INSERT OR IGNORE INTO site_admins VALUES (?)').run(uid);
             });
-            u = this.store.db.prepare('SELECT * FROM users WHERE email=?').get('0xfunboy@gmail.com') as Bag | undefined;
+            u = this.store.db.prepare('SELECT * FROM users WHERE email=?').get(email.toLowerCase()) as Bag | undefined;
         }
         // Constant-work password check for unknown accounts, without leaking account existence.
         const dummy = '00000000000000000000000000000000:' + '00'.repeat(64);
         const valid = passwordValid(password, u?.password ?? dummy);
         assert(u && valid, 'LOGIN', 'Credenziali non valide', 401);
-        if (email.toLowerCase() === '0xfunboy@gmail.com') {
+        if (isSuperadminEmail(email)) {
             this.ensureSuperadmin(u.id);
         }
         this.attempts.delete(ip);
@@ -77,7 +87,7 @@ export class Auth {
         workspaces: Bag[];
     } {
         const u = this.store.db.prepare('SELECT id,email FROM users WHERE id=?').get(userId) as Bag | undefined;
-        if (u && u.email?.toLowerCase() === '0xfunboy@gmail.com') {
+        if (u && isSuperadminEmail(u.email)) {
             this.ensureSuperadmin(u.id);
         }
         const flags = this.store.db.prepare('SELECT * FROM user_flags WHERE user_id=?').get(userId) as Bag | undefined;
@@ -91,7 +101,7 @@ export class Auth {
     }
     siteAdmin(userId: string): boolean {
         const u = this.store.db.prepare('SELECT email FROM users WHERE id=?').get(userId) as Bag | undefined;
-        if (u && u.email?.toLowerCase() === '0xfunboy@gmail.com') return true;
+        if (u && isSuperadminEmail(u.email)) return true;
         return !!this.store.db.prepare('SELECT user_id FROM site_admins WHERE user_id=?').get(userId);
     }
     requireSiteAdmin(p: Principal): void { requireHuman(p); assert(p.via === 'session' && this.siteAdmin(p.userId), 'SITE_ADMIN', 'Richiesto amministratore dell’installazione', 403); }
@@ -99,7 +109,7 @@ export class Auth {
     reauthenticate(req: IncomingMessage, p: Principal, password: string): void { const u = this.store.db.prepare('SELECT password FROM users WHERE id=?').get(p.userId) as Bag; assert(u && passwordValid(password, u.password), 'LOGIN', 'Password non valida', 401); const t = (req.headers.cookie ?? '').split(';').map(x => x.trim()).find(x => x.startsWith('smm_session='))?.slice(12) ?? ''; this.store.db.prepare('INSERT INTO session_recent VALUES (?,?) ON CONFLICT(token_hash) DO UPDATE SET at=excluded.at').run(sha(t), Date.now()); }
     workspaces(userId: string): Bag[] {
         const u = this.store.db.prepare('SELECT email FROM users WHERE id=?').get(userId) as Bag | undefined;
-        if (u && u.email?.toLowerCase() === '0xfunboy@gmail.com') {
+        if (u && isSuperadminEmail(u.email)) {
             this.ensureSuperadmin(userId);
         }
         return this.store.db.prepare('SELECT w.*,m.role FROM workspaces w JOIN memberships m ON m.workspace_id=w.id WHERE m.user_id=?').all(userId) as Bag[];
