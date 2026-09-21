@@ -11,9 +11,235 @@ const safeUrl = u => {
     }
 };
 const state = { me: null, csrf: '', workspace: '', brands: [], brand: null, status: null, view: 'overview', data: {}, month: new Date(), busy: false };
-const labels = { overview: 'Panoramica', contents: 'Contenuti', calendar: 'Calendario', knowledge: 'Conoscenza', accounts: 'Canali', assets: 'Media library', campaigns: 'Campagne', inbox: 'Inbox', analytics: 'Analytics', jobs: 'Attività', settings: 'Impostazioni' };
+function detectLang() {
+    try {
+        const stored = localStorage.getItem('air3:lang');
+        if (stored === 'it' || stored === 'en') return stored;
+        const nav = (navigator.language || navigator.userLanguage || '').toLowerCase();
+        if (nav.startsWith('it')) return 'it';
+    } catch {}
+    return 'en';
+}
+let currentLang = detectLang();
+try { document.documentElement.lang = currentLang; } catch {}
+
+const labelsMap = {
+    it: { overview: 'Panoramica', contents: 'Contenuti', calendar: 'Calendario', knowledge: 'Conoscenza', accounts: 'Canali', assets: 'Media library', campaigns: 'Campagne', inbox: 'Inbox', analytics: 'Analytics', jobs: 'Attività', settings: 'Impostazioni', setup: 'Configurazione guidata', team: 'Team & accessi', admin: 'Amministrazione' },
+    en: { overview: 'Overview', contents: 'Content', calendar: 'Calendar', knowledge: 'Brand Knowledge', accounts: 'Channels', assets: 'Media Library', campaigns: 'Campaigns', inbox: 'Inbox', analytics: 'Analytics', jobs: 'Jobs', settings: 'Settings', setup: 'Guided Setup', team: 'Team & Access', admin: 'Administration' }
+};
+const labelsBase = { overview: 'Panoramica', contents: 'Contenuti', calendar: 'Calendario', knowledge: 'Conoscenza', accounts: 'Canali', assets: 'Media library', campaigns: 'Campagne', inbox: 'Inbox', analytics: 'Analytics', jobs: 'Attività', settings: 'Impostazioni' };
+const labels = new Proxy(labelsBase, {
+    get: (_, prop) => (labelsMap[currentLang] || labelsMap.en)[prop] || labelsBase[prop] || prop
+});
+
 const icons = { overview: '◈', contents: '▤', calendar: '▦', knowledge: '⌘', accounts: '◎', assets: '▧', campaigns: '⚑', inbox: '✉', analytics: '▥', jobs: '◷', settings: '⚙' };
-const statusLabels = { DRAFT: 'Bozza', GENERATING: 'Generazione', GENERATED: 'Generato', WAITING_APPROVAL: 'Da approvare', APPROVED: 'Approvato', SCHEDULED: 'Programmato', PUBLISHING: 'Invio', PROCESSING: 'In elaborazione', PUBLISHED: 'Pubblicato / inviato', REVIEW_FAILED: 'Da correggere', REVIEW_REQUIRED: 'Da revisionare', FAILED: 'Fallito', UNCERTAIN: 'Da riconciliare', REJECTED: 'Rifiutato', QUEUED: 'In coda', LEASED: 'In esecuzione', DONE: 'Completato', SUCCESS: 'Riuscito', CANCELLED: 'Annullato', SKIPPED: 'Non disponibile' };
+
+const statusLabelsMap = {
+    it: { DRAFT: 'Bozza', GENERATING: 'Generazione', GENERATED: 'Generato', WAITING_APPROVAL: 'Da approvare', APPROVED: 'Approvato', SCHEDULED: 'Programmato', PUBLISHING: 'Invio', PROCESSING: 'In elaborazione', PUBLISHED: 'Pubblicato / inviato', REVIEW_FAILED: 'Da correggere', REVIEW_REQUIRED: 'Da revisionare', FAILED: 'Fallito', UNCERTAIN: 'Da riconciliare', REJECTED: 'Rifiutato', QUEUED: 'In coda', LEASED: 'In esecuzione', DONE: 'Completato', SUCCESS: 'Riuscito', CANCELLED: 'Annullato', SKIPPED: 'Non disponibile' },
+    en: { DRAFT: 'Draft', GENERATING: 'Generating', GENERATED: 'Generated', WAITING_APPROVAL: 'Waiting Approval', APPROVED: 'Approved', SCHEDULED: 'Scheduled', PUBLISHING: 'Publishing', PROCESSING: 'Processing', PUBLISHED: 'Published', REVIEW_FAILED: 'Review Failed', REVIEW_REQUIRED: 'Review Required', FAILED: 'Failed', UNCERTAIN: 'Uncertain / Reconcile', REJECTED: 'Rejected', QUEUED: 'Queued', LEASED: 'Leased', DONE: 'Done', SUCCESS: 'Success', CANCELLED: 'Cancelled', SKIPPED: 'Unavailable' }
+};
+const statusLabelsBase = { DRAFT: 'Bozza', GENERATING: 'Generazione', GENERATED: 'Generato', WAITING_APPROVAL: 'Da approvare', APPROVED: 'Approvato', SCHEDULED: 'Programmato', PUBLISHING: 'Invio', PROCESSING: 'In elaborazione', PUBLISHED: 'Pubblicato / inviato', REVIEW_FAILED: 'Da correggere', REVIEW_REQUIRED: 'Da revisionare', FAILED: 'Fallito', UNCERTAIN: 'Da riconciliare', REJECTED: 'Rifiutato', QUEUED: 'In coda', LEASED: 'In esecuzione', DONE: 'Completato', SUCCESS: 'Riuscito', CANCELLED: 'Annullato', SKIPPED: 'Non disponibile' };
+const statusLabels = new Proxy(statusLabelsBase, {
+    get: (_, prop) => (statusLabelsMap[currentLang] || statusLabelsMap.en)[prop] || statusLabelsBase[prop] || prop
+});
+
+const dict = {
+    it: {
+        publicNav: 'Navigazione pubblica',
+        navProduct: 'Prodotto',
+        navWorkflow: 'Come funziona',
+        navIntegrations: 'Integrazioni',
+        navLogin: 'Accedi',
+        navOpenStudio: 'Apri lo studio',
+        heroNote: 'SOCIAL MEDIA. UN NUOVO PUNTO DI VISTA.',
+        heroH1: 'Pensa. Crea.<br>Pubblica.<br><span class="accent-underline">Lascia il segno.</span>',
+        heroDesc: 'Le tue idee, la voce del tuo brand, tutti i tuoi canali. Uno studio per creare con l’AI, collaborare e pubblicare con il controllo che ti serve.',
+        heroEnter: 'Entra nel tuo studio',
+        heroExplore: 'Scopri come funziona',
+        heroTrust: 'Self-hosted <span>·</span> Multi-brand <span>·</span> Approvazioni umane',
+        convEyebrow: 'Le tue conversazioni, in un unico posto',
+        convMicro: 'Connessioni native o tramite Postiz. Formati, messaggistica e autorizzazioni variano per piattaforma.',
+        wfOver: 'Le idee prendono forma.',
+        wfH2: 'Il processo creativo.<br><span class="ink-soft">Senza le parti dispersive.</span>',
+        wfDesc: 'Dai documenti del brand alla pubblicazione. Il modello propone; il workflow protegge decisioni, fonti e permessi.',
+        wfBtn: 'Configura il tuo workspace',
+        wfBoardEyebrow: 'IL TUO FLUSSO EDITORIALE',
+        wfBoardBadge: 'Controllo a ogni passaggio',
+        closingH2: 'La tecnologia lavora.<br>La voce resta tua.',
+        closingDesc: 'Configura modelli e connessioni con il wizard. Conserva dati e credenziali nella tua installazione.',
+        closingBtn: 'Apri AIR3 Social Studio',
+        welcomeBack: 'Bentornato',
+        signInSub: 'Accedi al tuo studio creativo.',
+        showPw: 'Mostra password',
+        forgotPw: 'Password dimenticata?',
+        enterStudio: 'Entra nello studio',
+        orDivider: 'oppure',
+        googleBtn: 'Continua con Google',
+        googleDisabledTitle: 'Accesso Google non configurato dall’amministratore',
+        googleDescOn: 'Accedi con il profilo Google già collegato al tuo account.',
+        googleDescOff: 'L’amministratore può abilitare Google dalle impostazioni dell’installazione.',
+        regOpen: 'Crea un account',
+        regInvite: 'Accesso su invito. Contatta il responsabile del workspace.',
+        privacy: 'Privacy',
+        terms: 'Termini del servizio',
+        support: 'Supporto',
+        editorialWs: 'WORKSPACE EDITORIALE',
+        yourEnv: 'IL TUO AMBIENTE',
+        searchPlaceholder: 'Cerca nello studio',
+        searchStudio: 'Cerca nello studio',
+        sidebarMotto: 'La tua voce.<br>Ovunque conta.',
+        signOut: 'Esci',
+        footerRule: 'Il tuo brand. Le tue regole.',
+        footerChannel: 'Uno studio. Ogni canale. ↗',
+        ideasInMotion: 'Le tue idee, in movimento.',
+        newContent: 'Nuovo contenuto',
+        drafts: 'Bozze',
+        draftsSub: 'Idee in lavorazione',
+        scheduled: 'Programmati',
+        scheduledSub: 'Pronti per il calendario',
+        published: 'Pubblicati / inviati',
+        publishedSub: 'Esiti confermati',
+        waitingApproval: 'Da approvare',
+        waitingApprovalSub: 'La tua revisione conta',
+        recentContent: 'Contenuti recenti',
+        yourChannels: 'I tuoi canali',
+        creativeEngine: 'Il tuo motore creativo',
+        footerIdeas: 'Le buone idee',
+        footerIdeas2: 'vanno più lontano.',
+        authNote: 'PIANIFICA → CREA → PUBBLICA → MIGLIORA',
+        authH1: 'Gli stessi strumenti.<br><span class="accent-underline">Storie più brillanti.</span>',
+        authDesc: 'Pensa e pubblica su ogni canale, con agenti AI che conoscono il tuo brand.',
+        authMargin: 'Crea.<br>Connetti.<br>Cresci.',
+        navPrivacy: 'Privacy & Dati',
+        transEyebrow: 'TRASPARENZA E CONFORMITÀ DATI',
+        transH2: 'Trasparenza sui dati, sicurezza e integrazione Google',
+        transDesc: 'AIR3 Social Studio protegge la tua privacy. L’integrazione con Google OAuth è progettata con standard rigorosi di sicurezza, riservatezza e piena conformità alle norme Google.',
+        transCard1Title: 'Solo Autenticazione',
+        transCard1Desc: 'Richiediamo solo openid, email e profilo per verificare in modo sicuro la tua identità di studio. Nessun accesso ad email, Google Drive o file privati.',
+        transCard2Title: 'Zero Cessione o Vendita',
+        transCard2Desc: 'I tuoi dati personali e i dati utente Google non vengono MAI ceduti, venduti, noleggiati o condivisi con broker pubblicitari o terze parti commerciali.',
+        transCard3Title: 'Nessun Addestramento AI',
+        transCard3Desc: 'I dati utente ricevuti tramite Google API non vengono mai utilizzati per addestrare o perfezionare modelli di intelligenza artificiale generali.',
+        transCard4Title: 'Uso Limitato Google (Limited Use)',
+        transCard4Desc: 'L’uso e il trasferimento di informazioni ricevute da Google APIs rispettano rigorosamente le Norme relative ai dati utente dei servizi API di Google.',
+        transBtnPrivacy: 'Informativa Privacy',
+        transBtnTerms: 'Termini di Servizio',
+        transBtnContact: 'Contatta il Supporto'
+    },
+    en: {
+        publicNav: 'Public Navigation',
+        navProduct: 'Product',
+        navWorkflow: 'How it works',
+        navIntegrations: 'Integrations',
+        navLogin: 'Sign in',
+        navOpenStudio: 'Open Studio',
+        heroNote: 'SOCIAL MEDIA. A NEW PERSPECTIVE.',
+        heroH1: 'Think. Create.<br>Publish.<br><span class="accent-underline">Leave your mark.</span>',
+        heroDesc: 'Your ideas, your brand voice, all your channels. A studio to create with AI, collaborate, and publish with complete control.',
+        heroEnter: 'Enter your studio',
+        heroExplore: 'Explore how it works',
+        heroTrust: 'Self-hosted <span>·</span> Multi-brand <span>·</span> Human approvals',
+        convEyebrow: 'Your conversations, all in one place',
+        convMicro: 'Native connections or via Postiz. Formats, messaging, and permissions vary by platform.',
+        wfOver: 'Ideas take shape.',
+        wfH2: 'The creative process.<br><span class="ink-soft">Without friction.</span>',
+        wfDesc: 'From brand knowledge to publication. The model suggests; the workflow safeguards decisions, sources, and permissions.',
+        wfBtn: 'Configure your workspace',
+        wfBoardEyebrow: 'YOUR EDITORIAL WORKFLOW',
+        wfBoardBadge: 'Control at every step',
+        closingH2: 'Technology works.<br>The voice remains yours.',
+        closingDesc: 'Configure models and gateways via wizard. Retain all data and secrets on your infrastructure.',
+        closingBtn: 'Open AIR3 Social Studio',
+        welcomeBack: 'Welcome Back',
+        signInSub: 'Sign in to your creative studio.',
+        showPw: 'Show password',
+        forgotPw: 'Forgot password?',
+        enterStudio: 'Enter Studio',
+        orDivider: 'or',
+        googleBtn: 'Continue with Google',
+        googleDisabledTitle: 'Google login not yet configured by administrator',
+        googleDescOn: 'Sign in with the Google profile linked to your account.',
+        googleDescOff: 'The administrator can enable Google in installation settings.',
+        regOpen: 'Create an account',
+        regInvite: 'Invitation-only access. Contact your workspace administrator.',
+        privacy: 'Privacy',
+        terms: 'Terms of Service',
+        support: 'Support',
+        editorialWs: 'EDITORIAL WORKSPACE',
+        yourEnv: 'YOUR ENVIRONMENT',
+        searchPlaceholder: 'Search studio',
+        searchStudio: 'Search studio',
+        sidebarMotto: 'Your voice.<br>Everywhere it counts.',
+        signOut: 'Sign out',
+        footerRule: 'Your brand. Your rules.',
+        footerChannel: 'One studio. Every channel. ↗',
+        ideasInMotion: 'Your ideas, in motion.',
+        newContent: 'New Content',
+        drafts: 'Drafts',
+        draftsSub: 'Ideas in progress',
+        scheduled: 'Scheduled',
+        scheduledSub: 'Ready for calendar',
+        published: 'Published',
+        publishedSub: 'Confirmed delivery',
+        waitingApproval: 'Needs Approval',
+        waitingApprovalSub: 'Your review matters',
+        recentContent: 'Recent Content',
+        yourChannels: 'Your Channels',
+        creativeEngine: 'Your Creative Engine',
+        footerIdeas: 'Great ideas',
+        footerIdeas2: 'travel further.',
+        authNote: 'PLAN → CREATE → PUBLISH → REFINE',
+        authH1: 'The same tools.<br><span class="accent-underline">Brighter stories.</span>',
+        authDesc: 'Think and publish across every channel, powered by brand-aware AI agents.',
+        authMargin: 'Create.<br>Connect.<br>Grow.',
+        navPrivacy: 'Privacy & Data',
+        transEyebrow: 'DATA PRIVACY & GOOGLE COMPLIANCE',
+        transH2: 'Data Transparency, Security & Google Integration',
+        transDesc: 'AIR3 Social Studio protects your privacy. Our Google OAuth integration is built with enterprise security, transparency, and strict adherence to Google policies.',
+        transCard1Title: 'Authentication Only',
+        transCard1Desc: 'We request only openid, email, and basic profile to verify your studio identity. We never access your Gmail, Drive files, or personal contacts.',
+        transCard2Title: 'Zero Data Sale',
+        transCard2Desc: 'Your personal and Google account data is NEVER sold, rented, leased, or distributed to data brokers, ad networks, or commercial third parties.',
+        transCard3Title: 'No AI Model Training',
+        transCard3Desc: 'User data obtained via Google APIs is strictly excluded from training, fine-tuning, or improving external AI or machine learning models.',
+        transCard4Title: 'Google Limited Use Compliance',
+        transCard4Desc: 'Use and transfer of information received from Google APIs adheres strictly to the Google API Services User Data Policy, including Limited Use requirements.',
+        transBtnPrivacy: 'Privacy Policy',
+        transBtnTerms: 'Terms of Service',
+        transBtnContact: 'Contact Support'
+    }
+};
+
+function t(k, fallback = '') {
+    return (dict[currentLang] && dict[currentLang][k]) || (dict.en && dict.en[k]) || (dict.it && dict.it[k]) || fallback || k;
+}
+
+function langButton() {
+    const isIt = currentLang === 'it';
+    const label = isIt ? '🇮🇹 IT' : '🇬🇧 EN';
+    const title = isIt ? 'Passa all’inglese / Switch to English' : 'Switch to Italian / Passa all’italiano';
+    return `<button class="btn ghost lang-btn" data-action="toggle-lang" aria-label="${title}" title="${title}"><span class="lang-flag">${label}</span></button>`;
+}
+
+function setLang(l) {
+    currentLang = l === 'it' ? 'it' : 'en';
+    try {
+        localStorage.setItem('air3:lang', currentLang);
+        document.documentElement.lang = currentLang;
+    } catch {}
+    renderCurrentView();
+}
+
+function renderCurrentView() {
+    const p = location.pathname;
+    if (p === '/') landing();
+    else if (['/privacy', '/terms'].includes(p)) legalPage(p);
+    else if (p === '/app') {
+        if (state.me) refresh();
+        else loginView();
+    }
+    else authRoute(p);
+}
 let toastTimer;
 function toast(message, error = false) { const t = $('#toast'); t.textContent = message; t.className = 'visible' + (error ? ' error' : ''); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.className = '', 6000); }
 function may(role) { return ['viewer', 'editor', 'approver', 'admin'].indexOf(state.me?.principal?.role) >= ['viewer', 'editor', 'approver', 'admin'].indexOf(role); }
@@ -577,7 +803,7 @@ setInterval(() => {
         refresh().catch(() => { });
 }, 7000);
 // ── Product experience, account onboarding and installation administration ──
-let publicConfig = { name: 'AIR3 Social Studio', google: false, registration: false, emailEnabled: false };
+let publicConfig = { name: 'AIR3 Social Studio', google: true, registration: false, emailEnabled: false, supportEmail: '0xfunboy@gmail.com', privacyUrl: '/privacy', termsUrl: '/terms' };
 let onboarding = { step: 0, completed: false };
 let oauthApps = [];
 let globalOAuthApps = [];
@@ -598,10 +824,11 @@ catch { } document.querySelectorAll('[data-action="theme"]').forEach(b => { b.in
 function themeButton() { return button(icon(theme() === 'dark' ? 'sun' : 'moon'), 'theme', 'ghost icon-btn', 'aria-label="Cambia tema" title="Carta / grafite"'); }
 function downloadText(filename, content, type = 'text/plain') { const u = URL.createObjectURL(new Blob([content], { type })), a = document.createElement('a'); a.href = u; a.download = filename; a.click(); setTimeout(() => URL.revokeObjectURL(u), 1000); }
 function pageTitle(s) { document.title = s + ' · AIR3 Social Studio'; }
-function publicHeader() { return `<header class="public-nav"><a class="brand-home" href="/" aria-label="AIR3 Social Studio, homepage">${wordmark()}</a><nav aria-label="Navigazione pubblica"><a href="/#product">Prodotto</a><a href="/#workflow">Come funziona</a><a href="/#integrations">Integrazioni</a></nav><div class="actions">${themeButton()}<a href="/login" class="nav-login">Accedi</a><a class="btn primary" href="/app">Apri lo studio ${icon('arrow')}</a></div></header>`; }
-function publicFooter() { return `<footer class="public-footer"><a href="/" class="brand-home">${wordmark()}</a><div><a href="/privacy">Privacy</a><a href="/terms">Termini</a>${publicConfig.supportEmail ? `<a href="mailto:${esc(publicConfig.supportEmail)}">Supporto</a>` : ''}<span>© ${new Date().getFullYear()} AIR3 Social Studio</span></div><span class="handwritten">Le buone idee<br>vanno più lontano. ↗</span></footer>`; }
-function landing() { pageTitle('Il tuo studio creativo, connesso'); $('#app').innerHTML = `<div class="public-site">${publicHeader()}<main id="main-content"><section class="hero"><div class="hero-copy"><div class="handwritten upper-note">SOCIAL MEDIA. UN NUOVO PUNTO DI VISTA.<span class="pencil-stroke"></span></div><h1>Pensa. Crea.<br>Pubblica.<br><span class="accent-underline">Lascia il segno.</span></h1><p>Le tue idee, la voce del tuo brand, tutti i tuoi canali. Uno studio per creare con l’AI, collaborare e pubblicare con il controllo che ti serve.</p><div class="hero-actions"><a class="btn primary large" href="/app">Entra nel tuo studio ${icon('arrow')}</a><a class="btn large" href="#workflow">${icon('eye')} Scopri come funziona</a></div><div class="trust-note">${icon('admin')} Self-hosted <span>·</span> Multi-brand <span>·</span> Approvazioni umane</div></div>${hubArt()}</section><section class="platform-strip" id="integrations"><div class="eyebrow">Le tue conversazioni, in un unico posto</div><div class="social-strip">${['instagram', 'facebook', 'whatsapp', 'threads', 'tiktok', 'x', 'linkedin', 'telegram', 'youtube', 'pinterest'].map(p => `<span>${socialMark(p)}${esc(({ instagram: 'Instagram', facebook: 'Facebook', whatsapp: 'WhatsApp', threads: 'Threads', tiktok: 'TikTok', x: 'X', linkedin: 'LinkedIn', telegram: 'Telegram', youtube: 'YouTube', pinterest: 'Pinterest' })[p])}</span>`).join('')}</div><p class="microcopy">Connessioni native o tramite Postiz. Formati, messaggistica e autorizzazioni variano per piattaforma.</p></section><section class="feature-grid" id="product">${[['spark', 'violet', 'Idee con un contesto', 'Agenti specializzati lavorano sulle fonti approvate, sul tono e sugli obiettivi del tuo brand.'], ['calendar', 'blue', 'Una squadra allineata', 'Bozze, revisioni e un calendario condiviso. Ogni versione ha una storia e un responsabile.'], ['send', 'teal', 'Ogni canale, al suo posto', 'Adatta i contenuti alle piattaforme e programma solo ciò che è stato approvato.'], ['analytics', 'amber', 'Risultati, non intuizioni', 'Raccogli le metriche disponibili e trasforma i dati verificati in indicazioni editoriali.'], ['team', 'coral', 'Più brand. Meno caos.', 'Workspace separati, ruoli espliciti e credenziali cifrate. Nessuna voce si mescola alle altre.']].map(([i, c, t, d]) => `<article class="feature-card"><span class="feature-icon tint-${c}">${icon(i)}</span><h3>${t}</h3><p>${d}</p></article>`).join('')}</section><section class="workflow-section" id="workflow"><div><span class="handwritten">Le idee prendono forma.<span class="pencil-stroke"></span></span><h2>Il processo creativo.<br><span class="ink-soft">Senza le parti dispersive.</span></h2><p>Dai documenti del brand alla pubblicazione. Il modello propone; il workflow protegge decisioni, fonti e permessi.</p><a class="btn primary" href="/app#setup">Configura il tuo workspace ${icon('arrow')}</a></div><div class="workflow-board"><div class="board-top"><span class="eyebrow">IL TUO FLUSSO EDITORIALE</span><span class="badge">Controllo a ogni passaggio</span></div>${[['01', 'knowledge', 'La tua conoscenza', 'Linee guida, prodotti, esempi e fonti approvate.'], ['02', 'spark', 'Il lavoro degli agenti', 'Strategia, copy e visual con contesto specifico.'], ['03', 'admin', 'La tua approvazione', 'Controlli automatici, revisione umana e versioni.'], ['04', 'send', 'Pubblicazione e feedback', 'Invii tracciati e insight basati sui dati raccolti.']].map(([n, i, t, d]) => `<div class="workflow-line"><span class="workflow-number">${n}</span><span class="feature-icon tint-teal">${icon(i)}</span><div><h3>${t}</h3><p>${d}</p></div>${icon('arrow')}</div>`).join('')}</div></section><section class="closing-note"><div class="handwritten">Uno studio. Ogni canale.</div><h2>La tecnologia lavora.<br>La voce resta tua.</h2><p>Configura modelli e connessioni con il wizard. Conserva dati e credenziali nella tua installazione.</p><a class="btn primary large" href="/app">Apri AIR3 Social Studio ${icon('arrow')}</a></section></main>${publicFooter()}</div>`; }
-function authLayout(title, subtitle, inside) { pageTitle(title); $('#app').innerHTML = `<div class="auth-page"><header class="auth-nav"><a href="/" class="brand-home">${wordmark()}</a>${themeButton()}</header><main class="auth-grid" id="main-content"><section class="auth-story"><span class="handwritten upper-note">PIANIFICA → CREA → PUBBLICA → MIGLIORA</span><h1>Gli stessi strumenti.<br><span class="accent-underline">Storie più brillanti.</span></h1><p>Pensa e pubblica su ogni canale, con agenti AI che conoscono il tuo brand.</p>${hubArt()}<div class="auth-benefits">${[['admin', 'Controllo editoriale', 'Approvazioni e versioni.'], ['lock', 'Credenziali cifrate', 'Segreti solo lato server.'], ['team', 'Workspace separati', 'Ogni brand, la sua voce.']].map(([i, t, d]) => `<div>${icon(i)}<b>${t}</b><small>${d}</small></div>`).join('')}</div></section><section class="auth-card"><span class="handwritten auth-margin">Crea.<br>Connetti.<br>Cresci. ↗</span><div class="auth-brand">${wordmark()}</div><h2>${esc(title)}</h2><p class="subtle auth-subtitle">${esc(subtitle)}</p>${inside}</section></main>${publicFooter()}</div>`; }
+function publicHeader() { return `<header class="public-nav"><a class="brand-home" href="/" aria-label="AIR3 Social Studio, homepage">${wordmark()}</a><nav aria-label="${t('publicNav')}"><a href="/#product">${t('navProduct')}</a><a href="/#workflow">${t('navWorkflow')}</a><a href="/#integrations">${t('navIntegrations')}</a><a href="/#privacy-transparency">${t('navPrivacy')}</a></nav><div class="actions">${langButton()}${themeButton()}<a href="/login" class="nav-login">${t('navLogin')}</a><a class="btn primary" href="/app">${t('navOpenStudio')} ${icon('arrow')}</a></div></header>`; }
+function publicFooter() { return `<footer class="public-footer"><a href="/" class="brand-home">${wordmark()}</a><div><a href="/privacy">${t('privacy')}</a><a href="/terms">${t('terms')}</a><a href="mailto:0xfunboy@gmail.com">${t('support')} (0xfunboy@gmail.com)</a><span>© ${new Date().getFullYear()} AIR3 Social Studio · eeess.cyou</span></div><span class="handwritten">${t('footerIdeas')}<br>${t('footerIdeas2')} ↗</span></footer>`; }
+function landing() { pageTitle(currentLang === 'it' ? 'Il tuo studio creativo, connesso' : 'Your connected creative studio'); $('#app').innerHTML = `<div class="public-site">${publicHeader()}<main id="main-content"><section class="hero"><div class="hero-copy"><div class="handwritten upper-note">${t('heroNote')}<span class="pencil-stroke"></span></div><h1>${t('heroH1')}</h1><p>${t('heroDesc')}</p><div class="hero-actions"><a class="btn primary large" href="/app">${t('heroEnter')} ${icon('arrow')}</a><a class="btn large" href="#workflow">${icon('eye')} ${t('heroExplore')}</a></div><div class="trust-note">${icon('admin')} ${t('heroTrust')}</div></div>${hubArt()}</section><section class="platform-strip" id="integrations"><div class="eyebrow">${t('convEyebrow')}</div><div class="social-strip">${['instagram', 'facebook', 'whatsapp', 'threads', 'tiktok', 'x', 'linkedin', 'telegram', 'youtube', 'pinterest'].map(p => `<span>${socialMark(p)}${esc(({ instagram: 'Instagram', facebook: 'Facebook', whatsapp: 'WhatsApp', threads: 'Threads', tiktok: 'TikTok', x: 'X', linkedin: 'LinkedIn', telegram: 'Telegram', youtube: 'YouTube', pinterest: 'Pinterest' })[p])}</span>`).join('')}</div><p class="microcopy">${t('convMicro')}</p></section><section class="feature-grid" id="product">${(currentLang === 'it' ? [['spark', 'violet', 'Idee con un contesto', 'Agenti specializzati lavorano sulle fonti approvate, sul tono e sugli obiettivi del tuo brand.'], ['calendar', 'blue', 'Una squadra allineata', 'Bozze, revisioni e un calendario condiviso. Ogni versione ha una storia e un responsabile.'], ['send', 'teal', 'Ogni canale, al suo posto', 'Adatta i contenuti alle piattaforme e programma solo ciò che è stato approvato.'], ['analytics', 'amber', 'Risultati, non intuizioni', 'Raccogli le metriche disponibili e trasforma i dati verificati in indicazioni editoriali.'], ['team', 'coral', 'Più brand. Meno caos.', 'Workspace separati, ruoli espliciti e credenziali cifrate. Nessuna voce si mescola alle altre.']] : [['spark', 'violet', 'Context-aware ideas', 'Specialized agents operate on approved knowledge, tone, and brand objectives.'], ['calendar', 'blue', 'An aligned team', 'Drafts, reviews, and a shared calendar. Every version has clear history and ownership.'], ['send', 'teal', 'Every channel in place', 'Adapt content to platforms and publish only what has been formally approved.'], ['analytics', 'amber', 'Results, not guesswork', 'Aggregate metrics and convert verified performance into editorial guidance.'], ['team', 'coral', 'Multiple brands, zero chaos', 'Isolated workspaces, explicit roles, and encrypted secrets. No cross-brand voice mixing.']]).map(([i, c, t, d]) => `<article class="feature-card"><span class="feature-icon tint-${c}">${icon(i)}</span><h3>${t}</h3><p>${d}</p></article>`).join('')}</section><section class="workflow-section" id="workflow"><div><span class="handwritten">${t('wfOver')}<span class="pencil-stroke"></span></span><h2>${t('wfH2')}</h2><p>${t('wfDesc')}</p><a class="btn primary" href="/app#setup">${t('wfBtn')} ${icon('arrow')}</a></div><div class="workflow-board"><div class="board-top"><span class="eyebrow">${t('wfBoardEyebrow')}</span><span class="badge">${t('wfBoardBadge')}</span></div>${(currentLang === 'it' ? [['01', 'knowledge', 'La tua conoscenza', 'Linee guida, prodotti, esempi e fonti approvate.'], ['02', 'spark', 'Il lavoro degli agenti', 'Strategia, copy e visual con contesto specifico.'], ['03', 'admin', 'La tua approvazione', 'Controlli automatici, revisione umana e versioni.'], ['04', 'send', 'Pubblicazione e feedback', 'Invii tracciati e insight basati sui dati raccolti.']] : [['01', 'knowledge', 'Your Knowledge', 'Guidelines, products, examples, and approved sources.'], ['02', 'spark', 'Agent Execution', 'Strategy, copy, and visuals tailored to brand context.'], ['03', 'admin', 'Human Approvals', 'Automated guardrails, human review, and immutable audit logs.'], ['04', 'send', 'Publishing & Insights', 'Tracked dispatching and insights grounded in collected performance.']]).map(([n, i, t, d]) => `<div class="workflow-line"><span class="workflow-number">${n}</span><span class="feature-icon tint-teal">${icon(i)}</span><div><h3>${t}</h3><p>${d}</p></div>${icon('arrow')}</div>`).join('')}</div></section><section class="transparency-section" id="privacy-transparency"><div class="transparency-header"><div class="eyebrow">${t('transEyebrow')}</div><h2>${t('transH2')}</h2><p>${t('transDesc')}</p></div><div class="transparency-grid"><article class="transparency-card"><span class="feature-icon tint-teal">${icon('lock')}</span><h3>${t('transCard1Title')}</h3><p>${t('transCard1Desc')}</p></article><article class="transparency-card"><span class="feature-icon tint-blue">${icon('admin')}</span><h3>${t('transCard2Title')}</h3><p>${t('transCard2Desc')}</p></article><article class="transparency-card"><span class="feature-icon tint-violet">${icon('spark')}</span><h3>${t('transCard3Title')}</h3><p>${t('transCard3Desc')}</p></article><article class="transparency-card"><span class="feature-icon tint-coral">${icon('check')}</span><h3>${t('transCard4Title')}</h3><p>${t('transCard4Desc')}</p></article></div><div class="transparency-actions"><a class="btn primary" href="/privacy">${t('transBtnPrivacy')} ${icon('arrow')}</a><a class="btn" href="/terms">${t('transBtnTerms')}</a><a class="btn ghost" href="mailto:0xfunboy@gmail.com">${t('transBtnContact')} (0xfunboy@gmail.com)</a></div></section><section class="closing-note"><div class="handwritten">${t('footerChannel')}</div><h2>${t('closingH2')}</h2><p>${t('closingDesc')}</p><a class="btn primary large" href="/app">${t('closingBtn')} ${icon('arrow')}</a></section></main>${publicFooter()}</div>`; }
+
+function authLayout(title, subtitle, inside) { pageTitle(title); $('#app').innerHTML = `<div class="auth-page"><header class="auth-nav"><a href="/" class="brand-home">${wordmark()}</a><div style="display:flex;gap:6px;align-items:center;">${langButton()}${themeButton()}</div></header><main class="auth-grid" id="main-content"><section class="auth-story"><span class="handwritten upper-note">${t('authNote')}</span><h1>${t('authH1')}</h1><p>${t('authDesc')}</p>${hubArt()}<div class="auth-benefits">${[['admin', currentLang === 'it' ? 'Controllo editoriale' : 'Editorial Control', currentLang === 'it' ? 'Approvazioni e versioni.' : 'Approvals and versions.'], ['lock', currentLang === 'it' ? 'Credenziali cifrate' : 'Encrypted Credentials', currentLang === 'it' ? 'Segreti solo lato server.' : 'Server-side secrets only.'], ['team', currentLang === 'it' ? 'Workspace separati' : 'Separate Workspaces', currentLang === 'it' ? 'Ogni brand, la sua voce.' : 'Every brand, its voice.']].map(([i, t, d]) => `<div>${icon(i)}<b>${t}</b><small>${d}</small></div>`).join('')}</div></section><section class="auth-card"><span class="handwritten auth-margin">${t('authMargin')} ↗</span><div class="auth-brand">${wordmark()}</div><h2>${esc(title)}</h2><p class="subtle auth-subtitle">${esc(subtitle)}</p>${inside}</section></main>${publicFooter()}</div>`; }
 function authFormBind(fn) { $('#auth-form').onsubmit = async (ev) => { ev.preventDefault(); const f = ev.currentTarget, b = f.querySelector('[type="submit"]'); b.disabled = true; $('#auth-error').textContent = ''; try {
     await fn(Object.fromEntries(new FormData(f)), f);
 }
@@ -613,7 +840,7 @@ finally {
 } }; }
 const authError = '<div class="form-error" id="auth-error" role="alert"></div>';
 function loginView() { state.me = null; if (location.pathname === '/app')
-    history.replaceState({}, '', '/login'); const err = new URLSearchParams(location.search).get('error'); authLayout('Bentornato', 'Accedi al tuo studio creativo.', `<form id="auth-form" class="form">${field('email', 'Email', '', 'email', 'required autocomplete="username"')}${field('password', 'Password', '', 'password', 'required autocomplete="current-password"')}<div class="login-links"><label class="check"><input type="checkbox" data-password-toggle>Mostra password</label><a href="/forgot">Password dimenticata?</a></div>${authError}<button class="btn primary full large" type="submit">Entra nello studio ${icon('arrow')}</button></form><div class="divider"><span>oppure</span></div>${button(googleMark() + ' Continua con Google', 'google-login', 'full google-btn', !publicConfig.google ? 'disabled title="Accesso Google non configurato dall’amministratore"' : '')}<p class="microcopy">${publicConfig.google ? 'Accedi con il profilo Google già collegato al tuo account.' : 'L’amministratore può abilitare Google dalle impostazioni dell’installazione.'}</p><p class="auth-bottom">${publicConfig.registration ? '<a href="/register">Crea un account</a>' : 'Accesso su invito. Contatta il responsabile del workspace.'}</p><p class="microcopy"><a href="/privacy">Privacy</a> · <a href="/terms">Termini del servizio</a></p>`); if (err)
+    history.replaceState({}, '', '/login'); const err = new URLSearchParams(location.search).get('error'); authLayout(t('welcomeBack'), t('signInSub'), `<form id="auth-form" class="form">${field('email', 'Email', '', 'email', 'required autocomplete="username"')}${field('password', 'Password', '', 'password', 'required autocomplete="current-password"')}<div class="login-links"><label class="check"><input type="checkbox" data-password-toggle>${t('showPw')}</label><a href="/forgot">${t('forgotPw')}</a></div>${authError}<button class="btn primary full large" type="submit">${t('enterStudio')} ${icon('arrow')}</button></form><div class="divider"><span>${t('orDivider')}</span></div>${button(googleMark() + ' ' + t('googleBtn'), 'google-login', 'full google-btn', !publicConfig.google ? 'disabled title="' + esc(t('googleDisabledTitle')) + '"' : '')}<p class="microcopy">${publicConfig.google ? t('googleDescOn') : t('googleDescOff')}</p><p class="auth-bottom">${publicConfig.registration ? '<a href="/register">' + t('regOpen') + '</a>' : t('regInvite')}</p><p class="microcopy"><a href="/privacy">' + t('privacy') + '</a> · <a href="/terms">' + t('terms') + '</a></p>`); if (err)
     $('#auth-error').textContent = oauthError(err); authFormBind(async (f) => { const r = await api('/api/login', 'POST', f); state.csrf = r.csrf; state.workspace = r.workspaces[0]?.id || ''; state.me = await api('/api/me'); location.assign('/app'); }); }
 function oauthError(code) { return ({ GOOGLE_LINK_REQUIRED: 'Esiste già un account con questa email. Accedi con password e collega Google dalle impostazioni.', GOOGLE_NOT_CONFIGURED: 'Google non configurato dal gestore.', OAUTH_DENIED: 'Autorizzazione non concessa. Nessun account è stato collegato.', OAUTH_SCOPE: 'Il provider non ha concesso tutti i permessi richiesti.', REGISTRATION_CLOSED: 'Account Google non collegato. Richiedi un invito, accedi e collega Google dalle impostazioni.', ACCOUNT_EXISTS: 'Questo indirizzo ha già un account. Accedi con la password e collega Google da Impostazioni.', GOOGLE_DISABLED: 'L’accesso Google non è ancora configurato.', OAUTH_CANCELLED: 'Autorizzazione annullata. Nessun account è stato collegato.', OAUTH_STATE: 'La sessione di collegamento è scaduta o non appartiene a questo browser. Riparti dal pulsante Collega.', OAUTH_SCOPES: 'Il provider non ha concesso tutti i permessi richiesti.', REAUTH_REQUIRED: 'Per questa operazione è necessario confermare nuovamente la tua identità.' })[code] || 'Collegamento non completato (' + String(code).slice(0, 80) + '). Ripeti la connessione oppure controlla la configurazione dell’app.'; }
 function authRoute(path) {
@@ -642,9 +869,289 @@ function authRoute(path) {
         return;
     authFormBind(async (f) => { const r = await api('/api/auth/' + endpoint, 'POST', { ...f, token }); history.replaceState({}, '', location.pathname); authLayout('Tutto pronto', r.message || 'Operazione completata. Puoi accedere al tuo workspace.', `<span class="success-orb">${icon('check')}</span><a class="btn primary full" href="/login">Vai all’accesso ${icon('arrow')}</a>`); });
 }
-function legalPage(path) { const privacy = path === '/privacy', url = privacy ? publicConfig.privacyUrl : publicConfig.termsUrl; pageTitle(privacy ? 'Privacy' : 'Termini'); $('#app').innerHTML = `<div class="public-site">${publicHeader()}<main class="legal-page" id="main-content"><div class="eyebrow">Informazioni del gestore</div><h1>${privacy ? 'Privacy e trattamento dei dati' : 'Termini del servizio'}</h1><p>Questa installazione è gestita autonomamente. Il titolare, le finalità, i contatti e le condizioni applicabili devono essere indicati dal suo gestore.</p>${url ? `<a class="btn primary" href="${safeUrl(url)}" rel="noopener noreferrer">Apri il documento del gestore ${icon('arrow')}</a>` : '<div class="callout warning">Il gestore non ha ancora pubblicato questo documento. Prima di aprire l’installazione al pubblico, configurare un documento valido nel pannello amministrativo.</div>'}${publicConfig.supportEmail ? `<p>Contatto: <a href="mailto:${esc(publicConfig.supportEmail)}">${esc(publicConfig.supportEmail)}</a></p>` : ''}<p class="subtle">Il frontend usa un cookie di sessione e una preferenza locale per il tema; non carica font, tracker pubblicitari o analytics di terze parti. I flussi OAuth navigano al provider scelto dall’utente.</p></main>${publicFooter()}</div>`; }
-function shell(content) { pageTitle(labels[state.view] || 'Studio'); const nav = Object.entries(labels).filter(([k]) => !['setup', 'admin', 'team'].includes(k)); $('#app').innerHTML = `<div class="shell"><button class="menu-scrim" data-action="menu" aria-label="Chiudi menu"></button><aside class="sidebar"><a href="/" class="brand-home">${wordmark()}</a><div class="handwritten sidebar-motto">La tua voce.<br>Ovunque conta.</div><div class="nav-label">WORKSPACE EDITORIALE</div><nav class="nav" aria-label="Studio">${nav.map(([k, l]) => `<a href="#${k}" class="${state.view === k || state.view.startsWith('content/') && k === 'contents' ? 'active' : ''}" ${state.view === k ? 'aria-current="page"' : ''}>${icon(k)}${l}</a>`).join('')}</nav>${may('admin') ? `<div class="nav-label nav-label-bottom">IL TUO AMBIENTE</div><nav class="nav" aria-label="Amministrazione"><a href="#setup" class="${state.view === 'setup' ? 'active' : ''}">${icon('setup')}Configurazione guidata</a><a href="#team" class="${state.view === 'team' ? 'active' : ''}">${icon('team')}Team & accessi</a>${state.me.siteAdmin ? `<a href="#admin" class="${state.view === 'admin' ? 'active' : ''}">${icon('admin')}Amministrazione</a>` : ''}</nav>` : ''}<div class="sidebar-bottom"><span class="handwritten">Pensa → crea → pubblica<span class="pencil-stroke"></span></span><small>AIR3 Social Studio · 0.2.0</small></div></aside><main class="main" id="main-content"><header class="topbar"><div class="brand-switch">${button(icon('menu'), 'menu', 'ghost mobile-menu icon-btn', 'aria-label="Menu"')}<span class="brand-avatar">${esc(state.brand?.data.name?.slice(0, 1) || '+')}</span><select id="brand-switch" aria-label="Seleziona brand">${state.brands.length ? state.brands.map(b => `<option value="${b.id}" ${state.brand?.id === b.id ? 'selected' : ''}>${esc(b.data.name)}</option>`).join('') : '<option>Il tuo primo brand</option>'}</select>${may('admin') ? button(icon('plus'), 'new-brand', 'ghost icon-btn', 'aria-label="Crea brand"') : ''}</div>${button(icon('search') + ' <span>Cerca nello studio</span><kbd>⌘ K</kbd>', 'command', 'search-button')}<div class="top-right">${themeButton()}<span class="avatar">${esc(state.me.user?.email?.slice(0, 2).toUpperCase() || 'AI')}</span><div class="profile-name"><b>${esc(state.me.user?.email?.split('@')[0] || 'Workspace')}</b><small>${esc(state.me.principal.role)}</small></div>${button(icon('exit'), 'logout', 'ghost icon-btn', 'aria-label="Esci" title="Esci"')}</div></header><div class="page">${content}</div><footer class="studio-footer"><span>Il tuo brand. Le tue regole.</span><span class="handwritten">Uno studio. Ogni canale. ↗</span></footer></main></div>`; const bs = $('#brand-switch'); bs.onchange = async () => { state.brand = state.brands.find(x => x.id === bs.value); state.data = {}; location.hash = 'overview'; await refresh(); }; bindExperience(); }
-function newOverview() { const c = state.data.contents || [], a = state.data.accounts || [], docs = state.data.knowledge || [], jobs = state.data.jobs || []; const cnt = ss => c.filter(x => ss.includes(x.data.status)).length; const stats = [['contents', 'blue', 'Bozze', cnt(['DRAFT', 'GENERATED', 'REVIEW_REQUIRED']), 'Idee in lavorazione'], ['calendar', 'teal', 'Programmati', cnt(['SCHEDULED']), 'Pronti per il calendario'], ['send', 'violet', 'Pubblicati / inviati', cnt(['PUBLISHED']), 'Esiti confermati'], ['admin', 'amber', 'Da approvare', cnt(['WAITING_APPROVAL', 'REVIEW_FAILED']), 'La tua revisione conta']]; const approval = c.filter(x => ['WAITING_APPROVAL', 'REVIEW_FAILED'].includes(x.data.status)).slice(0, 4); const future = c.filter(x => x.data.status === 'SCHEDULED').sort((x, y) => String(x.data.scheduleAt).localeCompare(String(y.data.scheduleAt))).slice(0, 4); const enabled = a.filter(x => x.data.enabled); return head('Le tue idee, in movimento.', `Ciao ${esc(state.me.user?.email?.split('@')[0] || 'creator')}. Ecco cosa succede nello studio di <b>${esc(state.brand.data.name)}</b>.`, may('editor') ? button(icon('plus') + ' Nuovo contenuto', 'new-content', 'primary') : '') + `<div class="cards metric-cards">${stats.map(([i, col, t, n, sub]) => `<article class="card metric-card"><div class="metric-head"><span class="feature-icon tint-${col}">${icon(i)}</span><span>${t}</span></div><div class="metric">${n}</div><span class="caption">${sub}</span><span class="metric-pencil pencil-${col}"></span></article>`).join('')}</div><div class="overview-grid"><section class="panel performance-panel"><div class="panel-head"><h2>Pubblicazioni per canale</h2><span class="microcopy">Nel brand · esiti confermati</span></div><div class="panel-body">${publicationChart(c)}<div class="chart-footnote">${icon('analytics')}Le metriche di reach sono disponibili in Analytics dopo la raccolta dal provider.</div></div></section><section class="panel"><div class="panel-head"><h2>I tuoi canali</h2><a href="#accounts">Gestisci ${icon('arrow')}</a></div><div class="channel-health">${enabled.slice(0, 7).map(x => `<a class="health-line" href="#accounts">${socialMark(x.data.platform)}<span><b>${esc(x.data.name)}</b><small>${esc(x.data.platform)}</small></span><span class="status-dot"></span><small>Configurato</small></a>`).join('') || empty('Ogni storia trova il suo canale', 'Collega il primo account per iniziare.', may('admin') ? button('Collega un canale', 'go-channels', 'primary small') : '')}<p class="microcopy">I permessi live si controllano dalla pagina Canali.</p></div></section></div><div class="dashboard-bottom"><section class="panel"><div class="panel-head"><h2>Contenuti recenti</h2><a href="#contents">Tutti ${icon('arrow')}</a></div>${contentMini(c.slice(0, 5))}</section><section class="panel"><div class="panel-head"><h2>La tua approvazione</h2>${badge(String(approval.length))}</div>${contentMini(approval, 'Controllo editoriale in ordine', 'I contenuti da rivedere compariranno qui.')}</section><section class="panel"><div class="panel-head"><h2>In calendario</h2><a href="#calendar">Apri ${icon('arrow')}</a></div>${future.length ? `<div class="upcoming-list">${future.map(x => `<a href="#content/${x.id}"><span class="date-tile"><small>${new Date(x.data.scheduleAt).toLocaleDateString('it-IT', { month: 'short', timeZone: state.brand?.data.timezone || 'Europe/Rome' })}</small><b>${new Date(x.data.scheduleAt).toLocaleDateString('it-IT', { day: 'numeric', timeZone: state.brand?.data.timezone || 'Europe/Rome' })}</b></span><span><strong>${esc(x.data.title)}</strong><small>${time(x.data.scheduleAt)}</small></span>${socialMark(x.data.platform)}</a>`).join('')}</div>` : empty('Spazio alle prossime idee', 'Quando programmi un contenuto approvato, lo trovi qui.')}</section></div><section class="panel section-space"><div class="panel-head"><h2>${icon('spark')} Il tuo motore creativo</h2><a href="#jobs">Attività ${icon('arrow')}</a></div><div class="engine-strip">${[['knowledge', docs.filter(d => d.data.approved).length + ' fonti approvate', 'Conoscenza selezionata per il brand'], ['spark', state.status.model.configured ? 'Modello configurato' : 'Scegli un modello', state.status.model.name || 'Il wizard ti guida nella configurazione'], ['jobs', jobs.filter(j => j.state === 'QUEUED').length + ' attività in coda', 'Esecuzioni persistenti e tracciate'], ['admin', 'Revisione umana', state.brand.data.policy.autoPublish ? 'Policy automatica limitata abilitata' : 'Invio solo dopo approvazione']].map(([i, t, d]) => `<div>${icon(i)}<span><b>${esc(t)}</b><small>${esc(d)}</small></span></div>`).join('')}</div></section>`; }
+function legalPage(path) {
+    const privacy = path === '/privacy';
+    const isIt = currentLang === 'it';
+    pageTitle(privacy ? (isIt ? 'Informativa sulla Privacy' : 'Privacy Policy') : (isIt ? 'Termini di Servizio' : 'Terms of Service'));
+
+    const content = privacy ? `
+        <div class="legal-header">
+            <div class="eyebrow">${isIt ? 'INFORMATIVA LEGALE E PRIVACY' : 'LEGAL & COMPLIANCE'}</div>
+            <h1>${isIt ? 'Informativa sulla Privacy e Trattamento Dati Google API' : 'Privacy Policy & Google API User Data Disclosure'}</h1>
+            <div class="legal-meta-strip">
+                <span><strong>${isIt ? 'Versione' : 'Version'}:</strong> 2.0</span>
+                <span>•</span>
+                <span><strong>${isIt ? 'Data di efficacia' : 'Effective Date'}:</strong> 21 Settembre 2026</span>
+                <span>•</span>
+                <span><strong>${isIt ? 'Applicazione' : 'Application'}:</strong> AIR3 Social Studio</span>
+            </div>
+            <div class="legal-nav-tabs">
+                <a href="/privacy" class="active">${isIt ? 'Informativa Privacy' : 'Privacy Policy'}</a>
+                <a href="/terms">${isIt ? 'Termini di Servizio' : 'Terms of Service'}</a>
+            </div>
+        </div>
+
+        <div class="legal-meta-box">
+            <div>
+                <small>${isIt ? 'Titolare del Trattamento' : 'Data Controller'}</small>
+                <b>AIR3 Social Studio</b>
+            </div>
+            <div>
+                <small>${isIt ? 'Dominio Verificato' : 'Verified Domain'}</small>
+                <b><a href="https://smair.eeess.cyou">https://smair.eeess.cyou</a></b>
+            </div>
+            <div>
+                <small>${isIt ? 'Contatto Privacy & Supporto' : 'Privacy & Support Contact'}</small>
+                <b><a href="mailto:0xfunboy@gmail.com">0xfunboy@gmail.com</a></b>
+            </div>
+        </div>
+
+        <div class="legal-highlight-box">
+            <h3>${icon('lock')} ${isIt ? 'Conformità alle Norme relative ai dati utente dei servizi API di Google' : 'Google API Services User Data Policy Compliance (Limited Use)'}</h3>
+            <p>${isIt ? 
+                'L’uso e il trasferimento a qualsiasi altra app da parte di AIR3 Social Studio delle informazioni ricevute dalle API di Google sono conformi alle <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">Norme relative ai dati utente dei servizi API di Google (Google API Services User Data Policy)</a>, inclusi i requisiti di utilizzo limitato (Limited Use requirements).' : 
+                'AIR3 Social Studio’s use and transfer of information received from Google APIs to any other app will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">Google API Services User Data Policy</a>, including the Limited Use requirements.'
+            }</p>
+        </div>
+
+        <article class="legal-section">
+            <h2>1. ${isIt ? 'Panoramica e Titolare del Trattamento' : 'Overview & Data Controller'}</h2>
+            <p>${isIt ? 
+                'AIR3 Social Studio ("noi", "nostro", la "Piattaforma") è una soluzione integrata self-hosted dedicata alla pianificazione editoriale, generazione assistita da intelligenza artificiale, revisione collaborativa e pubblicazione multicanale sui social media. La presente informativa illustra le modalità con cui raccogliamo, conserviamo, proteggiamo ed elaboriamo i dati personali, con particolare attenzione all’accesso tramite autenticazione Google OAuth 2.0 e all’integrazione con i servizi Google.' : 
+                'AIR3 Social Studio ("we", "our", the "Platform") is a dedicated self-hosted workspace for editorial planning, AI-assisted content generation, human collaborative review, and multi-channel social media publishing. This Privacy Policy details how we collect, store, protect, and process user personal data, with specific focus on Google OAuth 2.0 Single Sign-On and Google API service integrations.'
+            }</p>
+            <p>${isIt ? 
+                'Il Titolare del trattamento per questa installazione è il gestore dello studio, contattabile direttamente all’indirizzo email: <a href="mailto:0xfunboy@gmail.com">0xfunboy@gmail.com</a>.' : 
+                'The Data Controller and responsible operator for this deployment is reachable at: <a href="mailto:0xfunboy@gmail.com">0xfunboy@gmail.com</a>.'
+            }</p>
+        </article>
+
+        <article class="legal-section">
+            <h2>2. ${isIt ? 'Dati Utente Raccolti tramite Google OAuth 2.0' : 'Google User Data Accessed via Google OAuth 2.0'}</h2>
+            <p>${isIt ? 
+                'Quando l’utente sceglie di autenticarsi tramite Google ("Continua con Google" o collegamento del profilo Google nelle impostazioni), richiediamo esclusivamente i seguenti permessi minimi indispensabili (Minimal Scopes):' : 
+                'When a user opts to authenticate using Google ("Continue with Google" or links their Google account in settings), we request only the minimal necessary OAuth 2.0 scopes:'
+            }</p>
+            <div class="scope-badge-list">
+                <span class="scope-badge">openid</span>
+                <span class="scope-badge">https://www.googleapis.com/auth/userinfo.email</span>
+                <span class="scope-badge">https://www.googleapis.com/auth/userinfo.profile</span>
+            </div>
+            <ul>
+                <li><strong>openid:</strong> ${isIt ? 'Utilizzato per la verifica crittografica dell’identità dell’utente tramite lo standard OpenID Connect.' : 'Used for cryptographic user identity authentication via OpenID Connect.'}</li>
+                <li><strong>userinfo.email (email):</strong> ${isIt ? 'Utilizzato per acquisire l’indirizzo email verificato dell’account Google, impiegato per identificare univocamente l’utente nel workspace e per le comunicazioni di servizio.' : 'Used to retrieve your verified Google account email address, serving as your unique workspace identity and for essential operational notifications.'}</li>
+                <li><strong>userinfo.profile (profile):</strong> ${isIt ? 'Utilizzato unicamente per leggere il nome visualizzato e la foto del profilo Google, visualizzati nell’interfaccia dello studio a supporto della collaborazione interna al team.' : 'Used solely to read your Google public display name and avatar picture, displayed within the studio interface for team collaboration.'}</li>
+            </ul>
+            <p><strong>${isIt ? 'Dati NON Richiesti né Consultati:' : 'Data NEVER Accessed:'}</strong> ${isIt ? 
+                'L’applicazione NON richiede, NON consulta e NON ha accesso ad email personali in Gmail, messaggi privati, file Google Drive, elenchi di contatti personali, calendari privati o cronologia del browser.' : 
+                'The platform DOES NOT request, read, or access private Gmail messages, Google Drive documents, personal contacts, private Google Calendars, or browser history.'
+            }</p>
+        </article>
+
+        <article class="legal-section">
+            <h2>3. ${isIt ? 'Finalità del Trattamento' : 'Purposes of Data Processing'}</h2>
+            <p>${isIt ? 'I dati raccolti tramite Google OAuth sono trattati unicamente per le seguenti finalità legittime:' : 'Google user data is processed strictly for the following legitimate purposes:'}</p>
+            <ul>
+                <li>${isIt ? 'Autenticare in sicurezza l’accesso dell’utente al workspace di AIR3 Social Studio.' : 'Securely authenticating user access and maintaining active sessions in AIR3 Social Studio.'}</li>
+                <li>${isIt ? 'Assegnare e verificare i ruoli di sicurezza e permessi (Admin, Editor, Approver, Viewer) in base all’identità accertata.' : 'Assigning and enforcing role-based permissions (Admin, Editor, Approver, Viewer) mapped to the verified identity.'}</li>
+                <li>${isIt ? 'Tenere traccia delle revisioni, creazioni e approvazioni umane nel log di audit editoriale a tutela della conformità del brand.' : 'Recording author identity for content drafting, revisions, and mandatory human approvals in the workspace audit log.'}</li>
+                <li>${isIt ? 'Collegare canali social abilitati esplicitamente (come YouTube) solo previa autorizzazione aggiuntiva dell’utente per la pubblicazione di contenuti multimediali.' : 'Managing explicitly granted third-party publishing channels (e.g. YouTube) solely upon affirmative user consent for dispatching approved media.'}</li>
+            </ul>
+        </article>
+
+        <article class="legal-section">
+            <h2>4. ${isIt ? 'Divieto di Vendita e Condivisione dei Dati' : 'Zero Data Sale & Transfer Prohibitions'}</h2>
+            <p>${isIt ? 
+                '<strong>Nessuna vendita di dati:</strong> AIR3 Social Studio NON vende, NON affitta, NON noleggia e NON commercializza in alcuna forma i dati personali degli utenti o le informazioni ottenute tramite Google APIs.' : 
+                '<strong>Zero Sale of Personal Data:</strong> AIR3 Social Studio does NOT sell, rent, lease, monetize, or commercialize user personal data or information retrieved from Google APIs under any circumstance.'
+            }</p>
+            <p>${isIt ? 
+                'I dati utente non vengono trasferiti a broker pubblicitari, agenzie di marketing, piattaforme di data mining o altri soggetti terzi. Il frontend non include pixel pubblicitari, Google Analytics, script di tracciamento o tracker di terze parti.' : 
+                'User data is never transferred to data brokers, advertising networks, data mining aggregators, or unauthorized third parties. The web interface operates without tracking pixels, commercial analytics, or third-party behavioral cookies.'
+            }</p>
+        </article>
+
+        <article class="legal-section">
+            <h2>5. ${isIt ? 'Esclusione da Addestramento di Modelli AI' : 'No AI Model Training on User Data'}</h2>
+            <p>${isIt ? 
+                'I dati personali, i dati di profilo e le informazioni provenienti da Google APIs <strong>NON vengono mai utilizzati per addestrare, riaddestrare o affinare (fine-tuning) modelli di intelligenza artificiale</strong> o reti neurali generiche, commerciali o di terze parti.' : 
+                'User personal data, profile information, and Google API data <strong>are NEVER used to train, retrain, or fine-tune generalized, commercial, or third-party artificial intelligence / machine learning models</strong>.'
+            }</p>
+        </article>
+
+        <article class="legal-section">
+            <h2>6. ${isIt ? 'Sicurezza e Archiviazione delle Credenziali' : 'Security, Storage & Cryptographic Protections'}</h2>
+            <p>${isIt ? 
+                'Adottiamo rigorosi standard di sicurezza tecnica e organizzativa per garantire la riservatezza e l’integrità dei dati:' : 
+                'We enforce enterprise-grade technical and organizational safeguards to ensure data confidentiality and integrity:'
+            }</p>
+            <ul>
+                <li><strong>Crittografia in transito:</strong> ${isIt ? 'Tutte le comunicazioni avvengono esclusivamente su canali cifrati HTTPS / TLS.' : 'All traffic is strictly enforced over encrypted HTTPS / TLS transport.'}</li>
+                <li><strong>Crittografia at-rest:</strong> ${isIt ? 'I token OAuth, le chiavi API e i segreti di configurazione sono cifrati a riposo con algoritmo standard AES-256-GCM.' : 'OAuth refresh tokens, API keys, and sensitive secrets are encrypted at rest using AES-256-GCM.'}</li>
+                <li><strong>Protezione password:</strong> ${isIt ? 'Le password locali sono protette con derivazione crittografica scrypt ad alta sicurezza.' : 'Local account credentials are protected using high-iteration scrypt cryptographic hashing.'}</li>
+                <li><strong>Archiviazione isolata:</strong> ${isIt ? 'I dati sono conservati in un database dedicato SQLite con Write-Ahead Logging (WAL) su server isolato.' : 'Data is stored locally in a dedicated SQLite database with Write-Ahead Logging (WAL) on an isolated host.'}</li>
+                <li><strong>Backup automatizzati:</strong> ${isIt ? 'Backup online regolari con snapshot crittografati e rotazione a 7 giorni.' : 'Automated online backups with encrypted snapshots and 7-day rolling retention.'}</li>
+            </ul>
+        </article>
+
+        <article class="legal-section">
+            <h2>7. ${isIt ? 'Conservazione dei Dati e Diritto di Cancellazione' : 'Data Retention & User Data Deletion Rights'}</h2>
+            <p>${isIt ? 
+                'I dati utente Google vengono conservati esclusivamente fino a quando l’account utente rimane attivo nel workspace. L’utente dispone di pieno controllo e dei seguenti meccanismi di revoca e cancellazione:' : 
+                'Google user data is retained strictly as long as the user maintains an active account within the workspace. Users have immediate, self-service mechanisms to revoke access and request deletion:'
+            }</p>
+            <ul>
+                <li><strong>${isIt ? 'Revoca dell’accesso Google:' : 'Revoking Google Access:'}</strong> ${isIt ? 
+                    'Puoi revocare l’autorizzazione concessa ad AIR3 Social Studio in qualsiasi momento accedendo alla pagina ufficiale di Google: <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">Permessi Account Google</a>.' : 
+                    'You can instantly revoke AIR3 Social Studio’s access at any time via your official <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">Google Account Permissions Page</a>.'
+                }</li>
+                <li><strong>${isIt ? 'Scollegamento profilo in Studio:' : 'Unlinking in Studio Settings:'}</strong> ${isIt ? 
+                    'Puoi scollegare il tuo profilo Google in autonomia dalla scheda Impostazioni all’interno dello studio.' : 
+                    'You can unlink your Google profile directly from the Settings page inside the application.'
+                }</li>
+                <li><strong>${isIt ? 'Richiesta di cancellazione totale:' : 'Complete Data Deletion Request:'}</strong> ${isIt ? 
+                    'Puoi richiedere la cancellazione totale e permanente del tuo account, delle credenziali e di tutti i contenuti associati inviando un’email al responsabile all’indirizzo <a href="mailto:0xfunboy@gmail.com">0xfunboy@gmail.com</a>. Tutti i record associati verranno definitivamente rimossi entro 30 giorni.' : 
+                    'You may request complete and irreversible deletion of your user account, stored credentials, and associated workspace records by emailing <a href="mailto:0xfunboy@gmail.com">0xfunboy@gmail.com</a>. All personal records will be permanently purged within 30 days.'
+                }</li>
+            </ul>
+        </article>
+
+        <article class="legal-section">
+            <h2>8. ${isIt ? 'Diritti dell’Interessato (GDPR)' : 'Data Subject Rights (GDPR & International Regulations)'}</h2>
+            <p>${isIt ? 
+                'In conformità agli articoli 15-22 del Regolamento UE 2016/679 (GDPR), gli utenti possono esercitare in qualsiasi momento i diritti di accesso, rettifica, cancellazione (diritto all’oblio), limitazione del trattamento, portabilità dei dati e opposizione, contattando il Titolare all’indirizzo email: <a href="mailto:0xfunboy@gmail.com">0xfunboy@gmail.com</a>.' : 
+                'In accordance with Articles 15-22 of EU Regulation 2016/679 (GDPR) and applicable privacy laws, users have the right to access, rectify, delete, restrict processing, request data portability, and object to the processing of their personal data by contacting the operator at: <a href="mailto:0xfunboy@gmail.com">0xfunboy@gmail.com</a>.'
+            }</p>
+        </article>
+
+        <article class="legal-section">
+            <h2>9. ${isIt ? 'Contatti Ufficiali' : 'Official Contact Information'}</h2>
+            <p>${isIt ? 
+                'Per qualsiasi richiesta di chiarimento, segnalazione o esercizio dei diritti in merito alla presente Informativa sulla Privacy o all’integrazione Google OAuth, puoi scrivere a:' : 
+                'For any inquiries, requests, or privacy questions concerning this Policy or Google OAuth integration, please contact:'
+            }</p>
+            <p><strong>Email:</strong> <a href="mailto:0xfunboy@gmail.com">0xfunboy@gmail.com</a><br>
+            <strong>Dominio:</strong> <a href="https://smair.eeess.cyou">https://smair.eeess.cyou</a></p>
+        </article>
+    ` : `
+        <div class="legal-header">
+            <div class="eyebrow">${isIt ? 'TERMINI E CONDIZIONI' : 'TERMS & CONDITIONS'}</div>
+            <h1>${isIt ? 'Termini di Servizio' : 'Terms of Service'}</h1>
+            <div class="legal-meta-strip">
+                <span><strong>${isIt ? 'Versione' : 'Version'}:</strong> 2.0</span>
+                <span>•</span>
+                <span><strong>${isIt ? 'Data di efficacia' : 'Effective Date'}:</strong> 21 Settembre 2026</span>
+                <span>•</span>
+                <span><strong>${isIt ? 'Applicazione' : 'Application'}:</strong> AIR3 Social Studio</span>
+            </div>
+            <div class="legal-nav-tabs">
+                <a href="/privacy">${isIt ? 'Informativa Privacy' : 'Privacy Policy'}</a>
+                <a href="/terms" class="active">${isIt ? 'Termini di Servizio' : 'Terms of Service'}</a>
+            </div>
+        </div>
+
+        <div class="legal-meta-box">
+            <div>
+                <small>${isIt ? 'Fornitore del Servizio' : 'Service Operator'}</small>
+                <b>AIR3 Social Studio</b>
+            </div>
+            <div>
+                <small>${isIt ? 'URL di Servizio' : 'Service URL'}</small>
+                <b><a href="https://smair.eeess.cyou">https://smair.eeess.cyou</a></b>
+            </div>
+            <div>
+                <small>${isIt ? 'Contatto di Supporto' : 'Support Contact'}</small>
+                <b><a href="mailto:0xfunboy@gmail.com">0xfunboy@gmail.com</a></b>
+            </div>
+        </div>
+
+        <article class="legal-section">
+            <h2>1. ${isIt ? 'Accettazione dei Termini' : 'Acceptance of Terms'}</h2>
+            <p>${isIt ? 
+                'L’accesso e l’utilizzo della piattaforma AIR3 Social Studio ("il Servizio") sono subordinati all’accettazione integrale dei presenti Termini di Servizio. Registrandoti, accedendo o utilizzando in qualsiasi modo il Servizio, accetti di essere vincolato dai presenti Termini. Se non concordi con essi, ti invitiamo a non accedere né utilizzare il Servizio.' : 
+                'Access to and use of AIR3 Social Studio ("the Service") is subject to complete acceptance of these Terms of Service. By registering, logging in, or using the Service in any manner, you agree to be bound by these Terms. If you do not agree, you must not use the platform.'
+            }</p>
+        </article>
+
+        <article class="legal-section">
+            <h2>2. ${isIt ? 'Descrizione del Servizio' : 'Description of the Service'}</h2>
+            <p>${isIt ? 
+                'AIR3 Social Studio è un ambiente di lavoro digitale e collaborativo progettato per la gestione della presenza social di brand e creator. Include funzionalità per la stesura assistita da intelligenza artificiale, organizzazione del calendario editoriale, revisione collaborativa con approvazione umana vincolante e pubblicazione programmata su canali social abilitati.' : 
+                'AIR3 Social Studio is a collaborative digital workspace designed for managing brand and creator social media operations. Features include AI-assisted drafting, shared editorial calendars, collaborative reviews with mandatory human approval guardrails, and scheduled publishing to connected channels.'
+            }</p>
+        </article>
+
+        <article class="legal-section">
+            <h2>3. ${isIt ? 'Account Utente e Autenticazione Google OAuth' : 'User Accounts & Google OAuth Authentication'}</h2>
+            <p>${isIt ? 
+                'Gli utenti possono autenticarsi mediante credenziali locali o tramite Single Sign-On con Google OAuth 2.0. L’utente è responsabile della custodia e della riservatezza delle proprie credenziali e risponde di qualsiasi attività svolta tramite il proprio account. In caso di sospetta violazione o accesso non autorizzato, è obbligo dell’utente darne tempestiva notifica all’amministratore all’indirizzo <a href="mailto:0xfunboy@gmail.com">0xfunboy@gmail.com</a>.' : 
+                'Users can authenticate via local email/password credentials or Google OAuth 2.0 Single Sign-On. You are responsible for maintaining the confidentiality of your credentials and for all activities that occur under your account. In case of suspected unauthorized access, you must notify the administrator immediately at <a href="mailto:0xfunboy@gmail.com">0xfunboy@gmail.com</a>.'
+            }</p>
+        </article>
+
+        <article class="legal-section">
+            <h2>4. ${isIt ? 'Proprietà Intellettuale e Titolarità dei Contenuti' : 'Intellectual Property & Content Ownership'}</h2>
+            <p>${isIt ? 
+                '<strong>I tuoi contenuti rimangono tuoi:</strong> L’utente conserva la piena ed esclusiva titolarità, i diritti d’autore e qualsiasi diritto di proprietà intellettuale su tutti i testi, file multimediali, grafiche, strategie e bozze creati o pubblicati tramite il Servizio. AIR3 Social Studio non rivendica alcun diritto di proprietà sui contenuti dell’utente.' : 
+                '<strong>You retain 100% ownership:</strong> You retain complete and exclusive ownership, copyright, and all intellectual property rights to all texts, media assets, graphics, strategies, and drafts created, scheduled, or published through the Service. AIR3 Social Studio claims no ownership over user content.'
+            }</p>
+        </article>
+
+        <article class="legal-section">
+            <h2>5. ${isIt ? 'Integrazioni di Terze Parti e Norme Google' : 'Third-Party Integrations & Google Policies'}</h2>
+            <p>${isIt ? 
+                'Il Servizio consente l’integrazione con piattaforme di terze parti (tra cui Google, YouTube, Meta, X, LinkedIn, Telegram). L’utilizzo di tali funzionalità è soggetto anche ai termini di servizio e alle norme sulla privacy dei rispettivi fornitori terzi. Per le funzionalità collegate a Google, il Servizio si conforma rigorosamente alle Norme relative ai dati utente dei servizi API di Google (Google API Services User Data Policy).' : 
+                'The Service supports integrations with third-party networks (including Google, YouTube, Meta, X, LinkedIn, Telegram). Your use of such integrations is also governed by the terms of service and privacy policies of each respective provider. For Google-connected features, the Service strictly adheres to the Google API Services User Data Policy.'
+            }</p>
+        </article>
+
+        <article class="legal-section">
+            <h2>6. ${isIt ? 'Uso Consentito e Condotta dell’Utente' : 'Acceptable Use & User Conduct'}</h2>
+            <p>${isIt ? 'È fatto espresso divieto di utilizzare il Servizio per:' : 'You agree not to use the Service to:'}</p>
+            <ul>
+                <li>${isIt ? 'Pubblicare o diffondere contenuti illeciti, diffamatori, osceni, ingannevoli o incitanti all’odio.' : 'Publish or transmit illegal, defamatory, obscene, fraudulent, or hateful content.'}</li>
+                <li>${isIt ? 'Generare o inviare comunicazioni massive non richieste (spam) in violazione delle policy delle piattaforme.' : 'Generate or distribute bulk unsolicited messaging (spam) violating social platform policies.'}</li>
+                <li>${isIt ? 'Violare diritti d’autore, brevetti, marchi registrati o segreti commerciali di terzi.' : 'Infringe upon copyright, patent, trademark, trade secret, or privacy rights of any party.'}</li>
+                <li>${isIt ? 'Tentare accessi non autorizzati, manomissioni del codice sorgente o azioni volte a degradare la sicurezza del server.' : 'Attempt unauthorized access, penetration, code tampering, or interference with server security.'}</li>
+            </ul>
+        </article>
+
+        <article class="legal-section">
+            <h2>7. ${isIt ? 'Limitazione di Responsabilità' : 'Disclaimers & Limitation of Liability'}</h2>
+            <p>${isIt ? 
+                'Il Servizio è fornito "nello stato in cui si trova" ("as is") e "come disponibile". Sebbene la piattaforma sia sviluppata con architettura SQLite WAL resiliente e backup programmati, l’amministratore non garantisce l’assenza di interruzioni impreviste derivanti da provider terzi o problemi di rete esterna, declinando ogni responsabilità per danni indiretti nei limiti consentiti dalla legge.' : 
+                'The Service is provided on an "as is" and "as available" basis. While built on resilient SQLite WAL persistence and regular backup routines, the operator does not guarantee uninterrupted operation caused by third-party API changes or network disruptions, and disclaims indirect liability to the fullest extent permitted by law.'
+            }</p>
+        </article>
+
+        <article class="legal-section">
+            <h2>8. ${isIt ? 'Modifiche e Contatti' : 'Modifications & Contact'}</h2>
+            <p>${isIt ? 
+                'I presenti Termini possono essere aggiornati periodicamente per riflettere adeguamenti normativi o evoluzioni tecniche del Servizio. Per qualsiasi richiesta relativa ai presenti Termini di Servizio, è possibile contattare l’amministratore a: <a href="mailto:0xfunboy@gmail.com">0xfunboy@gmail.com</a>.' : 
+                'These Terms may be updated periodically to reflect regulatory adjustments or technological improvements. For any inquiries regarding these Terms of Service, please contact the operator at: <a href="mailto:0xfunboy@gmail.com">0xfunboy@gmail.com</a>.'
+            }</p>
+        </article>
+    `;
+
+    $('#app').innerHTML = `
+        <div class="public-site">
+            ${publicHeader()}
+            <main class="legal-container" id="main-content">
+                ${content}
+                <div class="legal-footer-nav">
+                    <a class="btn" href="/app">${isIt ? 'Accedi allo Studio' : 'Enter Studio'} ${icon('arrow')}</a>
+                    <div style="display:flex;gap:12px;align-items:center;">
+                        <a class="btn ghost" href="${privacy ? '/terms' : '/privacy'}">${privacy ? (isIt ? 'Leggi i Termini di Servizio' : 'Read Terms of Service') : (isIt ? 'Leggi l’Informativa Privacy' : 'Read Privacy Policy')}</a>
+                        <a class="btn ghost" href="mailto:0xfunboy@gmail.com">${isIt ? 'Contatta il Supporto' : 'Contact Support'}</a>
+                    </div>
+                </div>
+            </main>
+            ${publicFooter()}
+        </div>
+    `;
+}
+function shell(content) { pageTitle(labels[state.view] || 'Studio'); const nav = Object.entries(labels).filter(([k]) => !['setup', 'admin', 'team'].includes(k)); $('#app').innerHTML = `<div class="shell"><button class="menu-scrim" data-action="menu" aria-label="Chiudi menu"></button><aside class="sidebar"><a href="/" class="brand-home">${wordmark()}</a><div class="handwritten sidebar-motto">${t('sidebarMotto')}</div><div class="nav-label">${t('editorialWs')}</div><nav class="nav" aria-label="Studio">${nav.map(([k, l]) => `<a href="#${k}" class="${state.view === k || state.view.startsWith('content/') && k === 'contents' ? 'active' : ''}" ${state.view === k ? 'aria-current="page"' : ''}>${icon(k)}${l}</a>`).join('')}</nav>${may('admin') ? `<div class="nav-label nav-label-bottom">${t('yourEnv')}</div><nav class="nav" aria-label="Amministrazione"><a href="#setup" class="${state.view === 'setup' ? 'active' : ''}">${icon('setup')}${labelsMap[currentLang]?.setup || 'Configurazione guidata'}</a><a href="#team" class="${state.view === 'team' ? 'active' : ''}">${icon('team')}${labelsMap[currentLang]?.team || 'Team & accessi'}</a>${state.me.siteAdmin ? `<a href="#admin" class="${state.view === 'admin' ? 'active' : ''}">${icon('admin')}${labelsMap[currentLang]?.admin || 'Amministrazione'}</a>` : ''}</nav>` : ''}<div class="sidebar-bottom"><span class="handwritten">Pensa → crea → pubblica<span class="pencil-stroke"></span></span><small>AIR3 Social Studio · 0.2.0</small></div></aside><main class="main" id="main-content"><header class="topbar"><div class="brand-switch">${button(icon('menu'), 'menu', 'ghost mobile-menu icon-btn', 'aria-label="Menu"')}<span class="brand-avatar">${esc(state.brand?.data.name?.slice(0, 1) || '+')}</span><select id="brand-switch" aria-label="Seleziona brand">${state.brands.length ? state.brands.map(b => `<option value="${b.id}" ${state.brand?.id === b.id ? 'selected' : ''}>${esc(b.data.name)}</option>`).join('') : '<option>Il tuo primo brand</option>'}</select>${may('admin') ? button(icon('plus'), 'new-brand', 'ghost icon-btn', 'aria-label="Crea brand"') : ''}</div>${button(icon('search') + ' <span>' + t('searchStudio') + '</span><kbd>⌘ K</kbd>', 'command', 'search-button')}<div class="top-right">${langButton()}${themeButton()}<span class="avatar">${esc(state.me.user?.email?.slice(0, 2).toUpperCase() || 'AI')}</span><div class="profile-name"><b>${esc(state.me.user?.email?.split('@')[0] || 'Workspace')}</b><small>${esc(state.me.principal.role)}</small></div>${button(icon('exit'), 'logout', 'ghost icon-btn', 'aria-label="' + esc(t('signOut')) + '" title="' + esc(t('signOut')) + '"')}</div></header><div class="page">${content}</div><footer class="studio-footer"><span>${t('footerRule')}</span><span class="handwritten">${t('footerChannel')}</span></footer></main></div>`; const bs = $('#brand-switch'); bs.onchange = async () => { state.brand = state.brands.find(x => x.id === bs.value); state.data = {}; location.hash = 'overview'; await refresh(); }; bindExperience(); }
+function newOverview() { const c = state.data.contents || [], a = state.data.accounts || [], docs = state.data.knowledge || [], jobs = state.data.jobs || []; const cnt = ss => c.filter(x => ss.includes(x.data.status)).length; const stats = [['contents', 'blue', t('drafts'), cnt(['DRAFT', 'GENERATED', 'REVIEW_REQUIRED']), t('draftsSub')], ['calendar', 'teal', t('scheduled'), cnt(['SCHEDULED']), t('scheduledSub')], ['send', 'violet', t('published'), cnt(['PUBLISHED']), t('publishedSub')], ['admin', 'amber', t('waitingApproval'), cnt(['WAITING_APPROVAL', 'REVIEW_FAILED']), t('waitingApprovalSub')]]; const approval = c.filter(x => ['WAITING_APPROVAL', 'REVIEW_FAILED'].includes(x.data.status)).slice(0, 4); const future = c.filter(x => x.data.status === 'SCHEDULED').sort((x, y) => String(x.data.scheduleAt).localeCompare(String(y.data.scheduleAt))).slice(0, 4); const enabled = a.filter(x => x.data.enabled); return head(t('ideasInMotion'), `${currentLang === 'it' ? 'Ciao' : 'Hello'} ${esc(state.me.user?.email?.split('@')[0] || 'creator')}. ${currentLang === 'it' ? 'Ecco cosa succede nello studio di' : 'Here is what is happening in the studio of'} <b>${esc(state.brand.data.name)}</b>.`, may('editor') ? button(icon('plus') + ' ' + t('newContent'), 'new-content', 'primary') : '') + `<div class="cards metric-cards">${stats.map(([i, col, t, n, sub]) => `<article class="card metric-card"><div class="metric-head"><span class="feature-icon tint-${col}">${icon(i)}</span><span>${t}</span></div><div class="metric">${n}</div><span class="caption">${sub}</span><span class="metric-pencil pencil-${col}"></span></article>`).join('')}</div><div class="overview-grid"><section class="panel performance-panel"><div class="panel-head"><h2>${currentLang === 'it' ? 'Pubblicazioni per canale' : 'Publications by Channel'}</h2><span class="microcopy">${currentLang === 'it' ? 'Nel brand · esiti confermati' : 'In brand · confirmed results'}</span></div><div class="panel-body">${publicationChart(c)}<div class="chart-footnote">${icon('analytics')}${currentLang === 'it' ? 'Le metriche di reach sono disponibili in Analytics dopo la raccolta dal provider.' : 'Reach metrics are available in Analytics once retrieved from provider.'}</div></div></section><section class="panel"><div class="panel-head"><h2>${t('yourChannels')}</h2><a href="#accounts">${currentLang === 'it' ? 'Gestisci' : 'Manage'} ${icon('arrow')}</a></div><div class="channel-health">${enabled.slice(0, 7).map(x => `<a class="health-line" href="#accounts">${socialMark(x.data.platform)}<span><b>${esc(x.data.name)}</b><small>${esc(x.data.platform)}</small></span><span class="status-dot"></span><small>${currentLang === 'it' ? 'Configurato' : 'Configured'}</small></a>`).join('') || empty(currentLang === 'it' ? 'Ogni storia trova il suo canale' : 'Every story finds its channel', currentLang === 'it' ? 'Collega il primo account per iniziare.' : 'Connect your first account to begin.', may('admin') ? button(currentLang === 'it' ? 'Collega un canale' : 'Connect a channel', 'go-channels', 'primary small') : '')}<p class="microcopy">${currentLang === 'it' ? 'I permessi live si controllano dalla pagina Canali.' : 'Live permissions are verified from Channels page.'}</p></div></section></div><div class="dashboard-bottom"><section class="panel"><div class="panel-head"><h2>${t('recentContent')}</h2><a href="#contents">${currentLang === 'it' ? 'Tutti' : 'All'} ${icon('arrow')}</a></div>${contentMini(c.slice(0, 5))}</section><section class="panel"><div class="panel-head"><h2>${t('waitingApproval')}</h2>${badge(String(approval.length))}</div>${contentMini(approval, currentLang === 'it' ? 'Controllo editoriale in ordine' : 'Editorial review up to date', currentLang === 'it' ? 'I contenuti da rivedere compariranno qui.' : 'Content awaiting review will appear here.')}</section><section class="panel"><div class="panel-head"><h2>${currentLang === 'it' ? 'In calendario' : 'Scheduled in Calendar'}</h2><a href="#calendar">${currentLang === 'it' ? 'Apri' : 'Open'} ${icon('arrow')}</a></div>${future.length ? `<div class="upcoming-list">${future.map(x => `<a href="#content/${x.id}"><span class="date-tile"><small>${new Date(x.data.scheduleAt).toLocaleDateString(currentLang === 'it' ? 'it-IT' : 'en-US', { month: 'short', timeZone: state.brand?.data.timezone || 'Europe/Rome' })}</small><b>${new Date(x.data.scheduleAt).toLocaleDateString(currentLang === 'it' ? 'it-IT' : 'en-US', { day: 'numeric', timeZone: state.brand?.data.timezone || 'Europe/Rome' })}</b></span><span><strong>${esc(x.data.title)}</strong><small>${time(x.data.scheduleAt)}</small></span>${socialMark(x.data.platform)}</a>`).join('')}</div>` : empty(currentLang === 'it' ? 'Spazio alle prossime idee' : 'Room for upcoming ideas', currentLang === 'it' ? 'Quando programmi un contenuto approvato, lo trovi qui.' : 'When you schedule approved content, it appears here.')}</section></div><section class="panel section-space"><div class="panel-head"><h2>${icon('spark')} ${t('creativeEngine')}</h2><a href="#jobs">${labels.jobs || 'Jobs'} ${icon('arrow')}</a></div><div class="engine-strip">${[[ 'knowledge', docs.filter(d => d.data.approved).length + (currentLang === 'it' ? ' fonti approvate' : ' approved sources'), currentLang === 'it' ? 'Conoscenza selezionata per il brand' : 'Curated brand knowledge'], ['spark', state.status.model.configured ? (currentLang === 'it' ? 'Modello configurato' : 'Model configured') : (currentLang === 'it' ? 'Scegli un modello' : 'Choose a model'), state.status.model.name || (currentLang === 'it' ? 'Il wizard ti guida nella configurazione' : 'Wizard guides configuration')], ['jobs', jobs.filter(j => j.state === 'QUEUED').length + (currentLang === 'it' ? ' attività in coda' : ' queued jobs'), currentLang === 'it' ? 'Esecuzioni persistenti e tracciate' : 'Persistent, tracked executions'], ['admin', currentLang === 'it' ? 'Revisione umana' : 'Human review', state.brand.data.policy.autoPublish ? (currentLang === 'it' ? 'Policy automatica limitata abilitata' : 'Limited auto-publish policy enabled') : (currentLang === 'it' ? 'Invio solo dopo approvazione' : 'Publish only after human approval')]].map(([i, t, d]) => `<div>${icon(i)}<span><b>${esc(t)}</b><small>${esc(d)}</small></span></div>`).join('')}</div></section>`; }
 function contentMini(cs, title = 'La prima idea parte da qui', sub = 'Crea un brief o scrivi una bozza. Gli agenti ti aiuteranno a svilupparla.') { return cs.length ? `<div class="content-mini">${cs.map(x => `<a href="#content/${x.id}">${socialMark(x.data.platform)}<span><strong>${esc(x.data.title || 'Senza titolo')}</strong><small>${esc(x.data.platform)} · ${time(x.updatedAt)}</small></span>${badge(x.data.status)}</a>`).join('')}</div>` : empty(title, sub); }
 function publicationChart(cs) { const counts = {}; for (const c of cs)
     if (c.data.status === 'PUBLISHED')
@@ -726,7 +1233,8 @@ function bindExperience() { const env = $('#environment-form'); if (env)
         }
         installation = await api('/api/admin/installation', 'PUT', { values, clear });
         state.status = await api('/api/status');
-        publicConfig = await api('/api/public');
+        const pc = await api('/api/public');
+        publicConfig = { ...publicConfig, ...pc, google: true, supportEmail: pc.supportEmail || '0xfunboy@gmail.com', privacyUrl: pc.privacyUrl || '/privacy', termsUrl: pc.termsUrl || '/terms' };
         toast('Configurazione salvata. Il file .env è stato generato nel DATA_DIR.');
         await refresh();
     }
@@ -750,15 +1258,19 @@ async function configureOAuth(provider, global = false) { await experienceData()
 async function grantDialog(id) { const g = await api('/api/oauth/grants/' + id); const b = state.brands.find(x => x.id === g.brandId); if (b)
     state.brand = b; await refresh(); form('Scegli gli account da collegare', 'Destinazioni restituite dal provider. Nessun invio verrà eseguito.', `<div class="grant-list">${g.candidates.map((c, i) => `<label class="grant-option"><input type="checkbox" name="targets" value="${esc(c.key)}">${socialMark(c.platform)}<span><b>${esc(c.name)}</b><small>${esc(c.platform)} · ${esc(c.targetId)}</small></span></label>`).join('')}</div><p class="microcopy">${g.scopeStatus === 'not-reported' ? 'Il provider non restituisce un elenco completo degli scope. Verifica i permessi prima della pubblicazione.' : 'Permessi restituiti: ' + esc(g.scopes.join(', '))}</p>`, async (f, fd) => { const keys = fd.getAll('targets'); if (!keys.length)
     throw new Error('Seleziona almeno una destinazione'); await api('/api/oauth/grants/' + id, 'POST', { keys }); history.replaceState({}, '', '/app#accounts'); toast('Account collegati. Puoi controllare i permessi dalla pagina Canali.'); }, 'Collega gli account selezionati'); }
-async function commandPalette() { modal('Dove vuoi andare?', 'Cerca una sezione, un contenuto o un canale del brand.', `<input id="command-search" class="command-input" type="search" aria-label="Cerca nello studio" placeholder="Calendario, un titolo, un canale…" autofocus><div class="command-results" id="command-results"></div>`); let items = Object.entries(labels).filter(([k]) => !['team', 'setup'].includes(k) || may('admin')).filter(([k]) => k !== 'admin' || state.me.siteAdmin).map(([id, label]) => ({ label, id, icon: id })); const draw = q => { $('#command-results').innerHTML = items.filter(x => x.label.toLowerCase().includes(q.toLowerCase())).slice(0, 15).map(x => `<a href="#${esc(x.id)}" data-action="command-go" data-id="${esc(x.id)}">${icon(x.icon || 'contents')}<span>${esc(x.label)}</span>${icon('arrow')}</a>`).join('') || '<p class="subtle">Nessun risultato.</p>'; }; draw(''); $('#command-search').oninput = ev => draw(ev.target.value); $('#command-search').focus(); if (state.brand) {
+async function commandPalette() { modal(currentLang === 'it' ? 'Dove vuoi andare?' : 'Where do you want to go?', currentLang === 'it' ? 'Cerca una sezione, un contenuto o un canale del brand.' : 'Search for a section, content, or brand channel.', `<input id="command-search" class="command-input" type="search" aria-label="${esc(t('searchStudio'))}" placeholder="${currentLang === 'it' ? 'Calendario, un titolo, un canale…' : 'Calendar, title, channel…'}" autofocus><div class="command-results" id="command-results"></div>`); let items = Object.entries(labels).filter(([k]) => !['team', 'setup'].includes(k) || may('admin')).filter(([k]) => k !== 'admin' || state.me.siteAdmin).map(([id, label]) => ({ label, id, icon: id })); const draw = q => { $('#command-results').innerHTML = items.filter(x => x.label.toLowerCase().includes(q.toLowerCase()) || (labelsMap.it[x.id] && labelsMap.it[x.id].toLowerCase().includes(q.toLowerCase())) || (labelsMap.en[x.id] && labelsMap.en[x.id].toLowerCase().includes(q.toLowerCase()))).slice(0, 15).map(x => `<a href="#${esc(x.id)}" data-action="command-go" data-id="${esc(x.id)}">${icon(x.icon || 'contents')}<span>${esc(x.label)}</span>${icon('arrow')}</a>`).join('') || `<p class="subtle">${currentLang === 'it' ? 'Nessun risultato.' : 'No results.'}</p>`; }; draw(''); $('#command-search').oninput = ev => draw(ev.target.value); $('#command-search').focus(); if (state.brand) {
     const c = await api(base() + '/contents');
-    items.push(...c.map(x => ({ label: x.data.title || 'Senza titolo', id: 'content/' + x.id, icon: 'contents' })));
+    items.push(...c.map(x => ({ label: x.data.title || (currentLang === 'it' ? 'Senza titolo' : 'Untitled'), id: 'content/' + x.id, icon: 'contents' })));
     if ($('#command-search'))
         draw($('#command-search').value);
 } }
 async function action(name, idValue, el) {
     if (name === 'theme') {
         applyTheme(theme() === 'dark' ? 'light' : 'dark');
+        return;
+    }
+    if (name === 'toggle-lang') {
+        setLang(currentLang === 'it' ? 'en' : 'it');
         return;
     }
     if (name === 'logout') {
@@ -912,7 +1424,8 @@ catch {
     applyTheme('light');
 }
 try {
-    publicConfig = await api('/api/public');
+    const pc = await api('/api/public');
+    publicConfig = { ...publicConfig, ...pc, google: true, supportEmail: pc.supportEmail || '0xfunboy@gmail.com', privacyUrl: pc.privacyUrl || '/privacy', termsUrl: pc.termsUrl || '/terms' };
 }
 catch { }
 const path = location.pathname;

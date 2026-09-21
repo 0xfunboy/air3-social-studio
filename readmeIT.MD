@@ -1,24 +1,22 @@
 <p align="center">
-  <img src="docs/screenshots/landing-dark.webp" alt="AIR3 Social Studio — Enterprise Autonomous Social Publishing" width="100%">
+  <img src="docs/screenshots/landing-dark.webp" alt="AIR3 Social Studio — Autonomous Social Operations" width="100%">
 </p>
 
 <p align="center">
-  <strong>Think. Create. Publish. Leave your mark.</strong><br>
+  <strong>Pensa. Crea. Pubblica. Lascia il segno.</strong><br>
   <em>Autonomous Multi-Agent Social Media Operations & Brand RAG Intelligence — Enterprise v2.0</em>
 </p>
 
 <p align="center">
   <a href="https://smair.eeess.cyou"><strong>🌐 Live Studio (Cloudflare)</strong></a> ·
-  <a href="readmeIT.MD"><strong>🇮🇹 Documentazione in Italiano (readmeIT.MD)</strong></a> ·
   <a href="#at-a-glance">At a glance</a> ·
   <a href="#quickstart">Quickstart</a> ·
   <a href="#superadmin-access">Superadmin</a> ·
-  <a href="#google-login-setup">Google Login Setup</a> ·
-  <a href="#bilingual-ui">Bilingual UI</a> ·
   <a href="#architecture">Architecture</a> ·
   <a href="#multi-agent-system">AI Agents</a> ·
   <a href="#channel-hub">Channels & OAuth</a> ·
   <a href="#enterprise-security">Security</a> ·
+  <a href="#documentation">Documentation</a> ·
   <a href="#license">License</a>
 </p>
 
@@ -29,52 +27,45 @@
   <img src="https://img.shields.io/badge/Runtime-Node.js%2022.16%2B-forestgreen?style=flat-square" alt="Node 22">
   <img src="https://img.shields.io/badge/Storage-SQLite%20WAL%20Encrypted-critical?style=flat-square" alt="SQLite WAL">
   <img src="https://img.shields.io/badge/Ingress-Cloudflare%20Tunnel-orange?style=flat-square" alt="Cloudflare">
-  <img src="https://img.shields.io/badge/UI-Bilingual%20(IT%20%2F%20EN)-blueviolet?style=flat-square" alt="Bilingual">
   <img src="https://img.shields.io/badge/License-0xfunboy%20Non--Commercial%20v1.1-purple?style=flat-square" alt="License">
 </p>
 
 ---
 
-> [!NOTE]
-> **Italian Documentation**: A complete Italian edition of this document is preserved at [`readmeIT.MD`](readmeIT.MD).
-
----
-
 ## Executive Summary
 
-**AIR3 Social Studio v2.0 (Paper & Graphite)** is an enterprise-grade, self-hosted social media management and brand intelligence platform. Engineered for organizations that require complete operational data sovereignty, zero cloud vendor lock-in, and autonomous editorial deliberation, AIR3 unifies multi-agent AI collaboration, brand memory retrieval (RAG), cryptographic token isolation, and direct multi-channel social publishing into a unified, high-performance ecosystem.
+**AIR3 Social Studio v2.0 (Paper & Graphite)** is an enterprise-grade, self-hosted social media automation and brand intelligence suite. Engineered for organizations demanding complete data sovereignty, zero cloud vendor lock-in, and autonomous editorial workflows, AIR3 unifies multi-agent AI deliberation, brand memory retrieval (RAG), cryptographic secret isolation, and direct social network publishing into a single, cohesive ecosystem.
 
-Running entirely on your own infrastructure, AIR3 Social Studio features **zero runtime npm dependencies**, offline-verifiable TypeScript compilation, bilingual internationalization (Italian & English with auto-detection), and encrypted SQLite storage operating under strict WAL journaling.
+Unlike disjointed SaaS platforms or fragile wrapper scripts, AIR3 Social Studio runs entirely on your own infrastructure. It features zero runtime npm dependencies, offline-verifiable TypeScript compilation, and persistent encrypted SQLite storage with strict WAL journaling.
 
 ---
 
 ## At a glance
 
-- **Zero Runtime Dependencies** — Built strictly upon the Node.js 22.16+ standard library and native SQLite; eliminates the supply-chain vulnerability surface of external runtime npm packages.
-- **Paper & Graphite Design System** — Minimalist editorial aesthetic featuring tactile paper textures, graphite line-art, dark and light palettes, SVG vector branding, and instant mobile responsiveness.
-- **Bilingual Interface (IT / EN)** — Native dual-language support with automatic browser language detection (Italian when detected, English fallback for international browsers) and instant manual flag toggle (`🇮🇹 IT` / `🇬🇧 EN`).
-- **Autonomous Multi-Agent Council** — Six specialized AI agents (Strategist, Copywriter, Creative Director, Reviewer, Analyst, Planner) debate, refine, and enforce brand guidelines before human editorial approval.
-- **Deterministic Brand RAG Engine** — Hybrid lexical (FTS5) and dense semantic embedding retrieval (BGE-M3 / OpenAI / Gemini) grounding every post in verified corporate knowledge and brand assets.
-- **Centralized Social Hub & Direct OAuth** — Native publishing support for 20 channel types across 12 social families (LinkedIn, X/Twitter, Meta/Instagram/Threads, YouTube, TikTok, Pinterest, Bluesky, Farcaster, Telegram, Discord, and Postiz).
-- **Automated Superadmin Provisioning** — Built-in enterprise role assignment granting total administrative control, multi-workspace governance, and audit visibility to `0xfunboy@gmail.com`.
-- **Cloudflare Zero Trust Ingress** — Certificate-backed Cloudflare Tunnel terminating securely at `https://smair.eeess.cyou` with no open inbound firewall ports.
-- **Enterprise Security Isolation** — AES-256-GCM token vault encryption at rest, strict SSRF origin verification, constant-work password verification, and tamper-evident audit logs.
+- **Zero Runtime Dependencies** — Pure Node.js 22.16+ standard library and native SQLite; zero vulnerability surface from third-party runtime npm packages.
+- **Paper & Graphite Design System** — Bespoke editorial aesthetic with tactile paper textures, graphite line-art, dark/light modes, isometric SVG vector branding, and instant mobile responsiveness.
+- **Autonomous Multi-Agent Council** — Six specialized AI agents (Strategist, Copywriter, Creative Director, Reviewer, Analyst, Planner) collaborate, debate, and refine content against strict brand guidelines before human sign-off.
+- **Deterministic Brand RAG Engine** — Hybrid lexical (FTS5) and dense semantic embedding retrieval (BGE-M3 / OpenAI / Gemini) grounding every generated post in validated brand guidelines and official assets.
+- **Centralized Social Hub & Direct OAuth** — Native integration with 20 channel types across 12 social families (LinkedIn, X/Twitter, Meta/Instagram/Threads, YouTube, TikTok, Pinterest, Bluesky, Farcaster, Telegram, Discord, and Postiz).
+- **Automated Superadmin Provisioning** — Built-in enterprise role delegation granting full administrative autonomy, multi-workspace governance, and audit visibility to `0xfunboy@gmail.com`.
+- **Cloudflare Zero Trust Ingress** — Pre-configured, certificate-backed Cloudflare Tunnel terminating securely at `https://smair.eeess.cyou` with no open inbound firewall ports.
+- **Enterprise Security Isolation** — AES-256-GCM encrypted tokens at rest, strict SSRF origin verification, constant-time authentication, signed webhooks, and tamper-evident audit logging.
 
 ---
 
 ## Visual Experience
 
-The **Paper & Graphite** interface was designed from the ground up for clarity, precision, and focus. Every view is fully functional, dynamic, and directly bound to the backend REST APIs.
+The v2.0 **Paper & Graphite** interface was designed from the ground up for clarity, precision, and focus. Every view is fully functional, dynamic, and directly coupled to backend APIs.
 
 <p align="center">
-  <img src="docs/screenshots/overview-dark.webp" alt="AIR3 Social Studio — Executive Overview & Performance Hub" width="100%">
+  <img src="docs/screenshots/overview-dark.webp" alt="AIR3 Social Studio — Analytics & Performance Hub" width="100%">
   <em>Executive Overview: Campaign pacing, cross-platform reach, engagement metrics, and pending approval queues.</em>
 </p>
 
 <br>
 
 <p align="center">
-  <img src="docs/screenshots/wizard-social-dark.webp" alt="AIR3 Social Studio — Editorial Wizard" width="100%">
+  <img src="docs/screenshots/wizard-social-dark.webp" alt="AIR3 Social Studio — Social Setup Wizard" width="100%">
   <em>Editorial Wizard: Multi-channel scheduling, asset synthesis, brand guideline verification, and agent council deliberation.</em>
 </p>
 
@@ -91,13 +82,13 @@ The **Paper & Graphite** interface was designed from the ground up for clarity, 
   <img src="docs/screenshots/admin-shared-oauth-dark.webp" alt="AIR3 Social Studio — Enterprise Shared OAuth" width="49%">
   <img src="docs/screenshots/google-configuration-dark.webp" alt="AIR3 Social Studio — Google Identity Federation" width="49%">
   <br>
-  <em>Left: Centralized enterprise OAuth application vault. Right: Google Identity & OIDC Federation setup.</em>
+  <em>Left: Centralized OAuth credentials management. Right: Enterprise Google Identity & OIDC Federation.</em>
 </p>
 
 <br>
 
 <p align="center">
-  <img src="docs/screenshots/landing-light.webp" alt="AIR3 Social Studio — Light Palette" width="65%">
+  <img src="docs/screenshots/landing-light.webp" alt="AIR3 Social Studio — Light Theme" width="65%">
   <img src="docs/screenshots/landing-mobile.webp" alt="AIR3 Social Studio — Mobile View" width="32%">
   <br>
   <em>Adaptive Design: Paper & Graphite light palette and responsive layout optimized for handheld devices.</em>
@@ -109,52 +100,12 @@ The **Paper & Graphite** interface was designed from the ground up for clarity, 
 
 AIR3 Social Studio v2.0 includes automated administrative role provisioning:
 
-- **Designated Superadmin Identity:** `0xfunboy@gmail.com`
-- **Privilege Level:** Global Installation Superadmin (`site_admins` authority) + Full Workspace Admin across all active and future workspaces.
+- **Authorized Superadmin Identity:** `0xfunboy@gmail.com`
+- **Privilege Level:** Global Installation Superadmin (`site_admins` authority) + Full Workspace Admin on all active and future workspaces.
 - **Auto-Promotion Mechanics:**
-  - **Local Authentication:** Logging in or registering with `0xfunboy@gmail.com` automatically provisions the user with `verified=1`, `disabled=0`, inserts into `site_admins`, and grants `admin` membership on every workspace.
-  - **Google OIDC Federation:** When signing in via Google Identity, accounts matching `0xfunboy@gmail.com` are instantly linked, verified, and elevated to Superadmin without requiring manual database intervention.
+  - **Local Authentication:** Logging in or registering with `0xfunboy@gmail.com` automatically provisions the user, sets `verified=1`, `disabled=0`, inserts into `site_admins`, and grants `admin` membership across every workspace.
+  - **Google OIDC Federation:** When signing in via Google Identity, accounts with email `0xfunboy@gmail.com` are instantly linked, verified, and promoted to Superadmin without requiring manual database intervention.
   - **Session & Privilege Assertion:** On every session issuance and permission check, `siteAdmin()` unconditionally evaluates to `true`, providing unrestricted access to system telemetry, global OAuth credentials, audit logs, and multi-tenant workspaces.
-
----
-
-## Google Login Setup
-
-To enable **Sign in with Google** across your deployment:
-
-1. Open the [Google Cloud Console Credentials Page](https://console.cloud.google.com/apis/credentials).
-2. Configure the **OAuth consent screen** (User type: *External* or *Internal*).
-3. Click **Create Credentials → OAuth client ID** and select **Application type: Web application**.
-4. Configure the URIs:
-   - **Authorized JavaScript origins:**
-     - `https://smair.eeess.cyou`
-     - *(Optional for local development)*: `http://127.0.0.1:3100`
-   - **Authorized redirect URIs (Must match exactly):**
-     - `https://smair.eeess.cyou/oauth/google/callback`
-     - *(Optional for local development)*: `http://127.0.0.1:3100/oauth/google/callback`
-5. Save the generated **Client ID** and **Client Secret**.
-6. Supply credentials to AIR3 Social Studio using either method:
-   - **Method A (Web Dashboard):** Log in as Superadmin at `https://smair.eeess.cyou` → navigate to **Administration → Settings → Google Configuration** → enter keys and Save.
-   - **Method B (Environment File):** Add them to `/home/funboy/air3-social-studio/.env`:
-     ```env
-     GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-     GOOGLE_CLIENT_SECRET=GOCSPX-your-client-secret
-     ```
-     and restart the server.
-
-Once configured, users can log in with a single click, and `0xfunboy@gmail.com` will immediately receive full Superadmin rights.
-
----
-
-## Bilingual UI
-
-AIR3 Social Studio features native **Italian and English** support:
-
-- **Flag Selector**: A discrete flag toggle button (`🇮🇹 IT` / `🇬🇧 EN`) is positioned in the top navigation header next to the Dark/Light theme switch across the public landing page, authentication views, and the internal studio shell.
-- **Browser Language Detection**: When a user first opens the application:
-  - If the browser language begins with `it` (e.g. `it-IT`, `it-CH`), the interface displays in **Italian**.
-  - If the browser language is unidentified or any other language (e.g. `en`, `fr`, `de`), the interface defaults to **English**.
-- **Instant Client-Side Switching**: Selecting a language immediately updates all UI labels, navigation menus, command palette entries, modal dialogs, and status badges without losing active application state or requiring a page reload. Choices are persisted in `localStorage`.
 
 ---
 
@@ -169,24 +120,25 @@ AIR3 Social Studio features native **Italian and English** support:
 
 ### 2. Local Setup & Build
 
-All build dependencies (`typescript`, `@types/node`, `undici-types`) are vendored locally in `vendor/` as offline tarballs.
+All build tools (`typescript`, `@types/node`) are vendored locally as offline tarballs in `vendor/`.
 
 ```bash
-# 1. Navigate to project root
-cd /home/funboy/air3-social-studio
+# 1. Clone or navigate to the repository
+git clone https://github.com/0xfunboy/air3-social-studio.git
+cd air3-social-studio
 
-# 2. Link offline vendor dependencies & build TypeScript
+# 2. Link offline build dependencies & compile TypeScript
 npm ci --offline --ignore-scripts
 npm run build
 
-# 3. Initialize configuration & encryption keys
+# 3. Initialize configuration & generate encryption keys
 node scripts/setup.mjs --email 0xfunboy@gmail.com --url http://127.0.0.1:3100
 
-# 4. Start the studio server
+# 4. Launch the local daemon
 npm start
 ```
 
-Studio binds to `http://127.0.0.1:3100`. The setup script prints the generated Master Encryption Key and temporary initial password.
+Studio binds to `http://127.0.0.1:3100`. The setup script outputs the generated Master Encryption Key and temporary initial password.
 
 ---
 
@@ -195,19 +147,20 @@ Studio binds to `http://127.0.0.1:3100`. The setup script prints the generated M
 AIR3 Social Studio is deployed behind an encrypted Cloudflare Zero Trust Tunnel using the zone certificate `/home/funboy/.cloudflared/cert-eeess.pem`:
 
 - **Production Endpoint:** `https://smair.eeess.cyou`
-- **Local Loopback Target:** `http://127.0.0.1:3100`
+- **Local Ingress Service:** `http://127.0.0.1:3100`
 
 ### Tunnel Configuration Reference (`/home/funboy/.cloudflared/config-smair.yml`):
 
 ```yaml
-tunnel: b7406e78-ee24-4072-b5de-4bba888e8460
-credentials-file: /home/funboy/.cloudflared/b7406e78-ee24-4072-b5de-4bba888e8460.json
+tunnel: smair
+credentials-file: /home/funboy/.cloudflared/<tunnel-uuid>.json
 
 ingress:
   - hostname: smair.eeess.cyou
     service: http://127.0.0.1:3100
     originRequest:
       connectTimeout: 15s
+      noTLSVerify: false
   - service: http_status:404
 ```
 
@@ -221,13 +174,12 @@ cloudflared tunnel --config /home/funboy/.cloudflared/config-smair.yml run smair
 
 ## Architecture
 
-AIR3 Social Studio follows a modular monolithic architecture engineered for reliability, deterministic state transitions, and zero operational overhead:
+AIR3 Social Studio follows a modular, monolithic architecture designed for extreme reliability and zero operational overhead:
 
 ```
                       +------------------------------------------+
                       |       Browser / Mobile Client (ESM)      |
                       |   Paper & Graphite Minimalist Frontend   |
-                      |        Bilingual Engine (IT / EN)        |
                       +--------------------+---------------------+
                                            |
                               HTTPS / WSS (Port 443)
@@ -268,7 +220,7 @@ AIR3 Social Studio follows a modular monolithic architecture engineered for reli
 
 ## Multi-Agent System
 
-Content is never generated blindly. AIR3 coordinates an editorial deliberation protocol across six specialized agents:
+Content is never generated blindly. AIR3 executes a coordinated deliberation protocol across six specialized agents:
 
 1. **The Strategist** — Analyzes campaign goals, target demographics, historical performance metrics, and content timing.
 2. **The Copywriter** — Drafts channel-native copy adhering to length limits, hashtags, and tonal nuances.
@@ -307,7 +259,7 @@ AIR3 provides native support for both individual workspace credentials and centr
 - **Cryptographic Isolation:** Access tokens, refresh tokens, and API secrets are encrypted using AES-256-GCM before storage. Decryption occurs strictly in-memory at the point of dispatch.
 - **SSRF Immunity:** Outbound HTTP requests to external LLMs, webhooks, and social APIs are validated against an allowlist. Private RFC1918 addresses and link-local metadata endpoints are strictly blocked unless explicitly authorized in `ALLOWED_SSRF_ORIGINS`.
 - **Zero Token Leakage:** Authentication cookies use `HttpOnly`, `SameSite=Lax`, and `Secure` attributes. Master encryption keys are strictly isolated from SQLite database backups.
-- **Session Hardening:** 12-hour maximum session lifetimes with mandatory constant-work password hash verification.
+- **Session Hardening:** 12-hour maximum session lifetimes with mandatory constant-time password hash verification (Argon2id/PBKDF2 equivalent constant work).
 
 ---
 
@@ -345,7 +297,6 @@ Comprehensive operational, architecture, and API guides are available in the [`d
 - [Social Clients & Capabilities Matrix](docs/SOCIAL_CLIENTS.md)
 - [Security Model & Disclosure](SECURITY.md)
 - [Verification & Test Results](docs/VALIDATION.md)
-- [Italian Documentation (readmeIT.MD)](readmeIT.MD)
 
 ---
 
