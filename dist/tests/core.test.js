@@ -4,7 +4,7 @@ import { fixture, addAccount, addContent, approved, response } from './helpers.j
 import { encrypt, decrypt, passwordHash, passwordValid } from '../src/core/crypto.js';
 import { cosineSimilarity, jaccard } from '../src/rag/similarity.js';
 import { chunkText } from '../src/rag/index.js';
-import { requireHuman } from '../src/core/auth.js';
+import { requireHuman, isSuperadminEmail } from '../src/core/auth.js';
 import { ProviderError } from '../src/core/http.js';
 import { McpServer } from '../src/integrations/mcp.js';
 import { validateSchema } from '../src/agents/llm.js';
@@ -254,6 +254,22 @@ test('analyst uses real snapshot IDs and separate latest observation per post', 
     }
     finally {
         await f.cleanup();
+    }
+});
+test('isSuperadminEmail recognizes single and multiple comma-separated administrators', () => {
+    const orig = process.env.SUPERADMIN_EMAIL;
+    try {
+        process.env.SUPERADMIN_EMAIL = '0xfunboy@gmail.com, gianluca.eramo@ridemate.it';
+        assert.equal(isSuperadminEmail('0xfunboy@gmail.com'), true);
+        assert.equal(isSuperadminEmail('0XFUNBOY@GMAIL.COM'), true);
+        assert.equal(isSuperadminEmail('gianluca.eramo@ridemate.it'), true);
+        assert.equal(isSuperadminEmail('GIANLUCA.ERAMO@RIDEMATE.IT '), true);
+        assert.equal(isSuperadminEmail('unauthorized@example.com'), false);
+        assert.equal(isSuperadminEmail(''), false);
+        assert.equal(isSuperadminEmail(undefined), false);
+    }
+    finally {
+        process.env.SUPERADMIN_EMAIL = orig;
     }
 });
 //# sourceMappingURL=core.test.js.map

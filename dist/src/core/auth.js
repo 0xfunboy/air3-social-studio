@@ -50,9 +50,14 @@ export function isSuperadminEmail(email) {
     if (!email)
         return false;
     const lower = email.toLowerCase().trim();
-    const envAdmin = (process.env.SUPERADMIN_EMAIL || '').toLowerCase().trim();
+    const raw = `${process.env.SUPERADMIN_EMAIL || ''},${process.env.SUPERADMIN_EMAILS || ''}`;
+    const envAdmins = raw
+        .toLowerCase()
+        .split(',')
+        .map(e => e.trim().replace(/^["']|["']$/g, ''))
+        .filter(Boolean);
     const bootstrap = (process.env.BOOTSTRAP_EMAIL || '').toLowerCase().trim();
-    return (envAdmin !== '' && lower === envAdmin) || (bootstrap !== '' && lower === bootstrap);
+    return envAdmins.includes(lower) || (bootstrap !== '' && lower === bootstrap);
 }
 export class Auth {
     store;
