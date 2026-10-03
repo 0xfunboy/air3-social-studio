@@ -914,6 +914,7 @@ function oauthError(code) {
         OAUTH_CANCELLED: 'Autorizzazione annullata. Nessun account è stato collegato.',
         OAUTH_STATE: 'La sessione di collegamento è scaduta o non appartiene a questo browser. Riparti dal pulsante Collega.',
         OAUTH_SCOPES: 'Il provider non ha concesso tutti i permessi richiesti.',
+        OAUTH_TIMEOUT: 'La finestra di collegamento è rimasta aperta troppo a lungo. Ripeti la connessione.',
         REAUTH_REQUIRED: 'Per questa operazione è necessario confermare nuovamente la tua identità.'
     };
     const errorsEn = {
@@ -927,6 +928,7 @@ function oauthError(code) {
         OAUTH_CANCELLED: 'Authorization cancelled. No account was connected.',
         OAUTH_STATE: 'Connection state expired or does not match this browser session. Please try connecting again.',
         OAUTH_SCOPES: 'The provider did not grant all required scopes.',
+        OAUTH_TIMEOUT: 'The connection window stayed open too long. Please start the connection again.',
         REAUTH_REQUIRED: 'Confirming your identity is required for this sensitive operation.'
     };
     const map = isIt ? errorsIt : errorsEn;
@@ -1308,14 +1310,33 @@ function channelCatalog(compact = false) {
     return `<div class="connection-grid ${compact ? 'compact' : ''}">${keys.filter(p => catalog[p]).map(p => {
         const app = oauthApps.find(a => a.platforms.includes(p));
         const n = connections.filter(c => c.data.platform === p && c.data.enabled).length;
-        const subLabel = app ? 'OAuth · ' + esc(app.label) : p === 'telegram' ? (isIt ? 'Bot e canale verificati' : 'Verified bot & channel') : (isIt ? 'Credenziali / Postiz' : 'Credentials / Postiz');
+        const managedSocial = app && ['meta', 'instagram'].includes(app.provider);
+        const subLabel = app ? (managedSocial ? (p === 'instagram' || p === 'instagram-dm' ? 'Login Instagram' : 'Login Facebook') : 'OAuth · ' + esc(app.label)) : p === 'telegram' ? (isIt ? 'Bot e canale verificati' : 'Verified bot & channel') : (isIt ? 'Credenziali / Postiz' : 'Credentials / Postiz');
         const connectText = isIt ? 'Collega' : 'Connect';
         const configOAuthText = isIt ? 'Configura OAuth' : 'Configure OAuth';
-        const configBtnText = app?.configured ? connectText : configOAuthText;
         const telegramBtnText = isIt ? 'Collega bot' : 'Connect bot';
         const configOtherText = isIt ? 'Configura' : 'Configure';
         const adminOnlyNote = isIt ? '<small>Collegamento riservato agli amministratori</small>' : '<small>Connection reserved for administrators</small>';
-        return `<article class="connection-card"><div class="connection-title">${socialMark(p)}<span><h3>${esc(catalog[p].label)}</h3><small>${subLabel}</small></span>${n ? `<span class="count-pill">${n}</span>` : ''}</div><p>${esc(catalog[p].notes)}</p><div class="connection-actions">${may('admin') ? app ? button(icon('link') + ' ' + configBtnText, app.configured ? 'connect-oauth' : 'configure-oauth', app.configured ? 'primary small' : 'small', dataId(app.configured ? p : app.provider)) + (app.configured ? button(icon('settings'), 'configure-oauth', 'ghost icon-btn', dataId(app.provider) + ' aria-label="' + (isIt ? 'Configura app ' : 'Configure app ') + esc(app.label) + '"') : '') : button(p === 'telegram' ? telegramBtnText : configOtherText, p === 'telegram' ? 'telegram-connect' : 'new-account', 'small', dataId(p)) : adminOnlyNote}</div></article>`;
+        let actions = adminOnlyNote;
+        if (may('admin')) {
+            if (app?.configured) {
+                actions = button(icon('link') + ' ' + connectText, 'connect-oauth', 'primary small', dataId(p));
+                if (!managedSocial)
+                    actions += button(icon('settings'), 'configure-oauth', 'ghost icon-btn', dataId(app.provider) + ' aria-label="' + (isIt ? 'Configura app ' : 'Configure app ') + esc(app.label) + '"');
+                else if (state.me.siteAdmin)
+                    actions += button(icon('settings'), 'configure-shared-oauth', 'ghost icon-btn', dataId(app.provider) + ' aria-label="' + (isIt ? 'Configura app condivisa ' : 'Configure shared app ') + esc(app.label) + '"');
+            }
+            else if (managedSocial) {
+                actions = state.me.siteAdmin
+                    ? button(icon('settings') + ' ' + (isIt ? 'Configura app' : 'Configure app'), 'configure-shared-oauth', 'small', dataId(app.provider))
+                    : `<small>${isIt ? 'L’app viene configurata una sola volta dal gestore. Poi qui comparirà «Collega».' : 'The app is configured once by the operator. Then “Connect” will appear here.'}</small>`;
+            }
+            else if (app)
+                actions = button(icon('settings') + ' ' + configOAuthText, 'configure-oauth', 'small', dataId(app.provider));
+            else
+                actions = button(p === 'telegram' ? telegramBtnText : configOtherText, p === 'telegram' ? 'telegram-connect' : 'new-account', 'small', dataId(p));
+        }
+        return `<article class="connection-card"><div class="connection-title">${socialMark(p)}<span><h3>${esc(catalog[p].label)}</h3><small>${subLabel}</small></span>${n ? `<span class="count-pill">${n}</span>` : ''}</div><p>${esc(catalog[p].notes)}</p><div class="connection-actions">${actions}</div></article>`;
     }).join('')}</div>`;
 }
 function accountsPage() {
@@ -1572,6 +1593,55 @@ async function grantDialog(id) {
         isIt ? 'Collega gli account selezionati' : 'Connect selected accounts'
     );
 }
+async function openOAuthWindow(platform) {
+    const isIt = currentLang === 'it';
+    const r = await api(base() + '/oauth/' + platform + '/start', 'POST', {});
+    const mobile = matchMedia('(max-width: 720px)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (mobile) {
+        location.assign(r.url);
+        return;
+    }
+    const width = 560, height = 760, left = Math.max(0, Math.round((screen.width - width) / 2)), top = Math.max(0, Math.round((screen.height - height) / 2));
+    const popup = window.open(r.url, 'air3-social-oauth', `popup=yes,width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`);
+    if (!popup) {
+        location.assign(r.url);
+        return;
+    }
+    popup.focus();
+    await new Promise((resolve, reject) => {
+        let done = false, poll = 0, timeout = 0;
+        const finish = (error, grant) => {
+            if (done)
+                return;
+            done = true;
+            clearInterval(poll);
+            clearTimeout(timeout);
+            removeEventListener('message', onMessage);
+            try { popup.close(); } catch { }
+            if (error)
+                reject(new Error(oauthError(error)));
+            else
+                Promise.resolve(grant ? grantDialog(grant) : undefined).then(resolve, reject);
+        };
+        const onMessage = (ev) => {
+            if (ev.origin !== location.origin || ev.source !== popup || ev.data?.type !== 'air3-oauth-result')
+                return;
+            finish(ev.data.error || '', ev.data.grant || '');
+        };
+        addEventListener('message', onMessage);
+        poll = setInterval(() => {
+            try {
+                if (popup.location.origin !== location.origin || popup.location.pathname !== '/app')
+                    return;
+                const params = new URLSearchParams(popup.location.search);
+                if (params.has('grant') || params.has('oauth_error'))
+                    finish(params.get('oauth_error') || '', params.get('grant') || '');
+            }
+            catch { /* Cross-origin while the provider owns the popup. */ }
+        }, 300);
+        timeout = setTimeout(() => finish('OAUTH_TIMEOUT', ''), 5 * 60 * 1000);
+    });
+}
 async function commandPalette() { modal(currentLang === 'it' ? 'Dove vuoi andare?' : 'Where do you want to go?', currentLang === 'it' ? 'Cerca una sezione, un contenuto o un canale del brand.' : 'Search for a section, content, or brand channel.', `<input id="command-search" class="command-input" type="search" aria-label="${esc(t('searchStudio'))}" placeholder="${currentLang === 'it' ? 'Calendario, un titolo, un canale…' : 'Calendar, title, channel…'}" autofocus><div class="command-results" id="command-results"></div>`); let items = Object.entries(labels).filter(([k]) => !['team', 'setup'].includes(k) || may('admin')).filter(([k]) => k !== 'admin' || state.me.siteAdmin).map(([id, label]) => ({ label, id, icon: id })); const draw = q => { $('#command-results').innerHTML = items.filter(x => x.label.toLowerCase().includes(q.toLowerCase()) || (labelsMap.it[x.id] && labelsMap.it[x.id].toLowerCase().includes(q.toLowerCase())) || (labelsMap.en[x.id] && labelsMap.en[x.id].toLowerCase().includes(q.toLowerCase()))).slice(0, 15).map(x => `<a href="#${esc(x.id)}" data-action="command-go" data-id="${esc(x.id)}">${icon(x.icon || 'contents')}<span>${esc(x.label)}</span>${icon('arrow')}</a>`).join('') || `<p class="subtle">${currentLang === 'it' ? 'Nessun risultato.' : 'No results.'}</p>`; }; draw(''); $('#command-search').oninput = ev => draw(ev.target.value); $('#command-search').focus(); if (state.brand) {
     const c = await api(base() + '/contents');
     items.push(...c.map(x => ({ label: x.data.title || (currentLang === 'it' ? 'Senza titolo' : 'Untitled'), id: 'content/' + x.id, icon: 'contents' })));
@@ -1685,8 +1755,7 @@ async function action(name, idValue, el) {
     if (name === 'configure-oauth')
         return configureOAuth(idValue);
     if (name === 'connect-oauth') {
-        const r = await api(base() + '/oauth/' + idValue + '/start', 'POST', {});
-        location.assign(r.url);
+        await openOAuthWindow(idValue);
         return;
     }
     if (name === 'telegram-connect')
@@ -1892,6 +1961,14 @@ if (path === '/')
 else if (['/privacy', '/terms'].includes(path))
     legalPage(path);
 else if (path === '/app') {
+    const popupParams = new URLSearchParams(location.search);
+    if (window.opener && (popupParams.has('grant') || popupParams.has('oauth_error'))) {
+        try {
+            window.opener.postMessage({ type: 'air3-oauth-result', grant: popupParams.get('grant') || '', error: popupParams.get('oauth_error') || '' }, location.origin);
+            window.close();
+        }
+        catch { /* Parent polling is the fallback. */ }
+    }
     try {
         const params = new URLSearchParams(location.search);
         if (params.has('workspace'))
