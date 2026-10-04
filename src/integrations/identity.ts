@@ -67,14 +67,18 @@ export class Identity {
         const email = text(b.email, 'email', 300).toLowerCase(), password = text(b.password, 'password', 1000);
         assert(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email), 'EMAIL', 'Email non valida');
         assert(password.length >= 16, 'PASSWORD', 'Almeno 16 caratteri');
-        assert(this.settings.mailEnabled, 'MAIL_DISABLED', 'Verifica email non configurata', 503);
+        const requireEmailVerification = this.settings.value('REQUIRE_EMAIL_VERIFICATION') === 'true';
+        if (requireEmailVerification)
+            assert(this.settings.mailEnabled, 'MAIL_DISABLED', 'Verifica email non configurata', 503);
         const existing = this.auth.store.db.prepare('SELECT id FROM users WHERE email=?').get(email);
         if (existing)
             return;
         const uid = id(), wid = id();
-        this.auth.store.transaction(() => { this.auth.store.db.prepare('INSERT INTO users VALUES (?,?,?,?)').run(uid, email, passwordHash(password), now()); this.auth.store.db.prepare('INSERT INTO user_flags VALUES (?,0,0)').run(uid); this.auth.store.db.prepare('INSERT INTO workspaces VALUES (?,?)').run(wid, text(b.workspace ?? b.name ?? 'Il mio studio', 'workspace', 100)); this.auth.store.db.prepare('INSERT INTO memberships VALUES (?,?,?)').run(uid, wid, 'admin'); });
-        const token = this.createAction('verify', email, uid, wid, null, {}, 1440);
-        await this.mail(email, 'Verifica la tua email • AIR3 Social Studio', `Conferma il tuo indirizzo email aprendo questo link:\n${this.auth.cfg.baseUrl}/verify#${token}\n\nScade tra 24 ore. Se non hai richiesto l’account, ignora il messaggio.`).catch(() => console.error('Signup verification delivery failed; user can request a new verification link.'));
+        this.auth.store.transaction(() => { this.auth.store.db.prepare('INSERT INTO users VALUES (?,?,?,?)').run(uid, email, passwordHash(password), now()); this.auth.store.db.prepare('INSERT INTO user_flags VALUES (?,?,0)').run(uid, requireEmailVerification ? 0 : 1); this.auth.store.db.prepare('INSERT INTO workspaces VALUES (?,?)').run(wid, text(b.workspace ?? b.name ?? 'Il mio studio', 'workspace', 100)); this.auth.store.db.prepare('INSERT INTO memberships VALUES (?,?,?)').run(uid, wid, 'admin'); });
+        if (requireEmailVerification) {
+            const token = this.createAction('verify', email, uid, wid, null, {}, 1440);
+            await this.mail(email, 'Verifica la tua email • AIR3 Social Studio', `Conferma il tuo indirizzo email aprendo questo link:\n${this.auth.cfg.baseUrl}/verify#${token}\n\nScade tra 24 ore. Se non hai richiesto l’account, ignora il messaggio.`).catch(() => console.error('Signup verification delivery failed; user can request a new verification link.'));
+        }
     }
     async forgot(email: string, ip: string): Promise<void> { this.limit('reset:' + ip); this.limit('reset-email:' + sha(email.toLowerCase()), 3); const u = this.auth.store.db.prepare('SELECT u.*,f.disabled FROM users u LEFT JOIN user_flags f ON f.user_id=u.id WHERE email=?').get(email.toLowerCase()) as Bag | undefined; if (!u || u.disabled || !this.settings.mailEnabled)
         return; const token = this.createAction('reset', u.email, u.id, null, null, {}, 30); await this.mail(u.email, 'Recupero accesso • AIR3 Social Studio', `Imposta una nuova password:\n${this.auth.cfg.baseUrl}/reset#${token}\n\nIl link scade tra 30 minuti. Se non hai richiesto il recupero, ignora il messaggio.`).catch(() => console.error('Transactional reset delivery failed; check mail provider configuration.')); }

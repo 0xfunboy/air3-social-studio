@@ -39,7 +39,7 @@ try {
     const password = randomBytes(24).toString('base64url'), settings = {
         MASTER_KEY: randomBytes(32).toString('hex'), BOOTSTRAP_EMAIL: email.toLowerCase(), BOOTSTRAP_PASSWORD: password,
         HOST: '127.0.0.1', PORT: '3100', BASE_URL: origin.origin, DOMAIN: origin.hostname, DATA_DIR: data, WORKER_ENABLED: 'true',
-        ALLOW_REGISTRATION: 'false', SITE_NAME: 'AIR3 Social Studio', SUPPORT_EMAIL: email, PRIVACY_URL: '', TERMS_URL: '',
+        ALLOW_REGISTRATION: 'false', REQUIRE_EMAIL_VERIFICATION: 'false', SITE_NAME: 'AIR3 Social Studio', SUPPORT_EMAIL: email, PRIVACY_URL: '', TERMS_URL: '',
         LLM_PROVIDER: 'gemini', LLM_BASE_URL: 'https://generativelanguage.googleapis.com/v1beta', LLM_MODEL: '', LLM_API_KEY: '', GEMINI_API_KEY: '', GEMINI_IMAGE_MODEL: '',
         EMBEDDING_BASE_URL: '', EMBEDDING_MODEL: '', EMBEDDING_API_KEY: '', GOOGLE_CLIENT_ID: '', GOOGLE_CLIENT_SECRET: '', RESEND_API_KEY: '', MAIL_FROM: '',
         OUTBOUND_ORIGINS: '', META_GRAPH_VERSION: '', LINKEDIN_VERSION: '202609', TRUST_PROXY_IPS: '', FFMPEG_PATH: 'ffmpeg',

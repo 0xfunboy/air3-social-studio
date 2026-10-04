@@ -23,7 +23,8 @@ interface Provider {
     extra?: Bag;
 }
 export const OAUTH: Record<string, Provider> = {
-    meta: { label: 'Meta Business', platforms: ['facebook', 'instagram', 'messenger', 'instagram-dm', 'whatsapp'], auth: 'https://www.facebook.com/{version}/dialog/oauth', token: 'https://graph.facebook.com/{version}/oauth/access_token', scopes: [], separator: ',', docs: 'https://developers.facebook.com/docs/facebook-login/facebook-login-for-business/' },
+    meta: { label: 'Facebook / Meta', platforms: ['facebook', 'messenger', 'whatsapp'], auth: 'https://www.facebook.com/{version}/dialog/oauth', token: 'https://graph.facebook.com/{version}/oauth/access_token', scopes: [], separator: ',', docs: 'https://developers.facebook.com/docs/facebook-login/facebook-login-for-business/' },
+    instagram: { label: 'Instagram', platforms: ['instagram', 'instagram-dm'], auth: 'https://www.instagram.com/oauth/authorize', token: 'https://api.instagram.com/oauth/access_token', scopes: [], separator: ',', docs: 'https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/' },
     threads: { label: 'Threads', platforms: ['threads'], auth: 'https://www.threads.net/oauth/authorize', token: 'https://graph.threads.net/oauth/access_token', scopes: ['threads_basic', 'threads_content_publish', 'threads_manage_insights'], separator: ',', docs: 'https://www.postman.com/meta/threads/documentation/dht3nzz/threads-api' },
     tiktok: { label: 'TikTok', platforms: ['tiktok'], auth: 'https://www.tiktok.com/v2/auth/authorize/', token: 'https://open.tiktokapis.com/v2/oauth/token/', scopes: ['user.info.basic', 'video.publish'], separator: ',', docs: 'https://developers.tiktok.com/doc/login-kit-web/' },
     x: { label: 'X', platforms: ['x'], auth: 'https://x.com/i/oauth2/authorize', token: 'https://api.x.com/2/oauth2/token', scopes: ['tweet.read', 'tweet.write', 'users.read', 'offline.access'], pkce: true, basic: true, docs: 'https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code' },
@@ -46,7 +47,8 @@ interface Candidate {
 }
 const basic = (a: Bag) => 'Basic ' + Buffer.from(a.clientId + ':' + a.clientSecret).toString('base64');
 const bearer = (token: string) => ({ Authorization: 'Bearer ' + token });
-function tokenFields(b: Bag): Bag { assert(typeof b.access_token === 'string' && b.access_token.length > 0, 'OAUTH_TOKEN', 'Il provider non ha restituito un access token'); return { accessToken: b.access_token, ...(b.refresh_token ? { refreshToken: b.refresh_token } : {}), ...(Number(b.expires_in) > 0 ? { expiresAt: Date.now() + Number(b.expires_in) * 1000 } : {}), ...(Number(b.refresh_expires_in ?? b.refresh_token_expires_in) > 0 ? { refreshExpiresAt: Date.now() + Number(b.refresh_expires_in ?? b.refresh_token_expires_in) * 1000 } : {}), ...(b.scope ? { scopes: String(b.scope).split(/[ ,]+/).filter(Boolean) } : {}), issuedAt: Date.now() }; }
+function tokenPayload(b: Bag): Bag { if (!Array.isArray(b.data)) return b; assert(b.data.length === 1, 'OAUTH_TOKEN', 'Il provider ha restituito una risposta token ambigua'); return object(b.data[0]); }
+function tokenFields(input: Bag): Bag { const b = tokenPayload(input), rawScopes = b.scope ?? b.permissions; assert(typeof b.access_token === 'string' && b.access_token.length > 0, 'OAUTH_TOKEN', 'Il provider non ha restituito un access token'); return { accessToken: b.access_token, ...(b.refresh_token ? { refreshToken: b.refresh_token } : {}), ...(Number(b.expires_in) > 0 ? { expiresAt: Date.now() + Number(b.expires_in) * 1000 } : {}), ...(Number(b.refresh_expires_in ?? b.refresh_token_expires_in) > 0 ? { refreshExpiresAt: Date.now() + Number(b.refresh_expires_in ?? b.refresh_token_expires_in) * 1000 } : {}), ...(rawScopes ? { scopes: String(rawScopes).split(/[ ,]+/).filter(Boolean) } : {}), issuedAt: Date.now() }; }
 export class SocialOAuth {
     private locks = new Map<string, Promise<Bag>>();
     private maintenanceTimer?: ReturnType<typeof setInterval>;
@@ -57,7 +59,26 @@ export class SocialOAuth {
         const r = (global ? this.studio.store.db.prepare('SELECT value FROM installation WHERE key=?').get('oauth:' + provider) : this.studio.store.db.prepare('SELECT value FROM workspace_settings WHERE workspace_id=? AND key=?').get(wid, 'oauth:' + provider)) as Bag | undefined;
         return r ? { ...decrypt<Bag>(r.value, this.studio.cfg.masterKey, global ? `installation:oauth:${provider}` : `oauth-app:${wid}:${provider}`), _scope: global ? 'installation' : 'workspace' } : {};
     }
-    private app(wid: string, provider: string): Bag { const local = this.storedApp(wid, provider); return local._scope ? local : this.storedApp(wid, provider, true); }
+    private environmentApp(provider: string): Bag {
+        const prefix = provider === 'meta' ? 'META' : provider === 'instagram' ? 'INSTAGRAM' : '';
+        if (!prefix)
+            return {};
+        const clientId = process.env[`${prefix}_CLIENT_ID`] ?? (provider === 'meta' ? process.env.FACEBOOK_CLIENT_ID : undefined) ?? '';
+        const clientSecret = process.env[`${prefix}_CLIENT_SECRET`] ?? (provider === 'meta' ? process.env.FACEBOOK_CLIENT_SECRET : undefined) ?? '';
+        if (!clientId || !clientSecret)
+            return {};
+        return {
+            clientId,
+            clientSecret,
+            enabled: true,
+            ...(process.env[`${prefix}_CONFIG_ID`] ? { configId: process.env[`${prefix}_CONFIG_ID`] } : {}),
+            ...(process.env[`${prefix}_BUSINESS_ID`] ? { businessId: process.env[`${prefix}_BUSINESS_ID`] } : {}),
+            ...(process.env[`${prefix}_WEBHOOK_VERIFY_TOKEN`] ? { webhookVerifyToken: process.env[`${prefix}_WEBHOOK_VERIFY_TOKEN`] } : {}),
+            _scope: 'installation',
+            _environment: true
+        };
+    }
+    private app(wid: string, provider: string): Bag { const local = this.storedApp(wid, provider); if (local._scope) return local; const shared = this.storedApp(wid, provider, true); return shared._scope ? shared : this.environmentApp(provider); }
     apps(p: Principal, global = false): Bag[] {
         if (global)
             this.auth.requireSiteAdmin(p);
@@ -99,13 +120,14 @@ export class SocialOAuth {
         if (provider === 'meta') {
             if (platform === 'whatsapp')
                 return ['business_management', 'whatsapp_business_management', 'whatsapp_business_messaging'];
-            if (platform === 'instagram')
-                return ['pages_show_list', 'pages_read_engagement', 'instagram_basic', 'instagram_content_publish', 'instagram_manage_insights'];
-            if (platform === 'instagram-dm')
-                return ['pages_show_list', 'pages_read_engagement', 'pages_manage_metadata', 'instagram_basic', 'instagram_manage_messages'];
             if (platform === 'messenger')
                 return ['pages_show_list', 'pages_read_engagement', 'pages_messaging', 'pages_manage_metadata'];
             return ['pages_show_list', 'pages_read_engagement', 'pages_manage_posts'];
+        }
+        if (provider === 'instagram') {
+            if (platform === 'instagram-dm')
+                return ['instagram_business_basic', 'instagram_business_manage_messages'];
+            return ['instagram_business_basic', 'instagram_business_content_publish', 'instagram_business_manage_comments'];
         }
         if (platform === 'linkedin-page')
             return ['openid', 'profile', 'w_organization_social', 'rw_organization_admin'];
@@ -181,6 +203,11 @@ export class SocialOAuth {
             const exchanged = await this.http.request('https://graph.threads.net/access_token?' + new URLSearchParams({ grant_type: 'th_exchange_token', client_secret: a.clientSecret, access_token: c.accessToken }));
             c = { ...c, ...tokenFields(exchanged.body) };
         }
+        if (provider === 'instagram') {
+            const grantedScopes = c.scopes;
+            const exchanged = await this.http.request('https://graph.instagram.com/access_token?' + new URLSearchParams({ grant_type: 'ig_exchange_token', client_secret: a.clientSecret, access_token: c.accessToken }));
+            c = { ...c, ...tokenFields(exchanged.body), ...(grantedScopes ? { scopes: grantedScopes } : {}) };
+        }
         if (provider === 'meta') {
             const exchanged = await this.http.request(this.endpoint(provider, 'token', a) + '?' + new URLSearchParams({ grant_type: 'fb_exchange_token', client_id: a.clientId, client_secret: a.clientSecret, fb_exchange_token: c.accessToken }));
             c = { ...c, ...tokenFields(exchanged.body) };
@@ -203,7 +230,11 @@ export class SocialOAuth {
     private async discover(provider: string, platform: Platform, c: Bag, a: Bag, response: Bag): Promise<Candidate[]> {
         const out: Candidate[] = [], push = (targetId: unknown, name: unknown, credentials: Bag = c, options: Bag = {}) => { assert(targetId, 'OAUTH_TARGET', 'ID destinazione mancante'); out.push({ key: id(), platform, targetId: String(targetId), name: String(name ?? targetId).slice(0, 150), credentials, options }); };
         const t = c.accessToken;
-        if (provider === 'meta') {
+        if (provider === 'instagram') {
+            const me = await this.get('https://graph.instagram.com/' + this.studio.cfg.graphVersion + '/me?fields=user_id,username,name,account_type', t);
+            push(me.user_id, me.username ?? me.name ?? 'Instagram', c, { login: 'instagram', accountType: me.account_type });
+        }
+        else if (provider === 'meta') {
             const base = 'https://graph.facebook.com/' + this.studio.cfg.graphVersion;
             if (platform === 'whatsapp') {
                 const businesses = a.businessId ? [{ id: a.businessId }] : (await this.get(base + '/me/businesses?fields=id,name&limit=100', t)).data ?? [];
@@ -315,7 +346,7 @@ export class SocialOAuth {
         assert(activeApp.enabled !== false && sha(JSON.stringify(activeApp)) === c.credentials.oauthConfigFingerprint, 'OAUTH_CONFIG', 'App modificata dopo il consenso: riconnettere');
     } assert(Array.isArray(keys) && keys.length > 0 && keys.length <= 50 && new Set(keys).size === keys.length, 'TARGETS', 'Scegli da 1 a 50 destinazioni'); const chosen: Candidate[] = keys.map(k => { const c = r.payload.candidates.find((x: Candidate) => x.key === k); assert(c, 'TARGETS', 'Destinazione non presente nel grant'); return c; }); const results = chosen.map(c => { const old = this.studio.store.list<Account>(p, 'account', r.brand_id).find(e => e.data.platform === c.platform && e.data.targetId === c.targetId && e.data.transport === 'direct'); const result = this.studio.saveAccount(p, r.brand_id, { ...c, transport: 'direct', enabled: true, revision: old?.revision }, old?.id); this.health(result.id, 'CONNECTED', 'Identità e destinazione lette dal provider; nessun test di pubblicazione eseguito.'); return result; }); this.studio.store.db.prepare('DELETE FROM connection_grants WHERE id=?').run(grantId); return results; }); }
     health(aid: string, state: string, detail: string): void { this.studio.store.db.prepare('INSERT INTO connection_health VALUES (?,?,?,?) ON CONFLICT(account_id) DO UPDATE SET state=excluded.state,checked_at=excluded.checked_at,detail=excluded.detail').run(aid, state, now(), detail.slice(0, 1000)); }
-    list(p: Principal, bid: string): Bag[] { this.studio.scope(p, bid); return this.studio.store.list<Account>(p, 'account', bid).map(e => { const c = this.studio.hub.credentials(e), h = this.studio.store.db.prepare('SELECT * FROM connection_health WHERE account_id=?').get(e.id) as Bag | undefined; return { ...publicAccount(e), connection: { state: !e.data.enabled ? 'DISABLED' : c.expiresAt && c.expiresAt < Date.now() ? 'EXPIRED' : h?.state ?? 'UNVERIFIED', checkedAt: h?.checked_at ?? null, detail: h?.detail ?? 'Credenziali salvate. Verifica connessione non eseguita.', provider: c.oauthProvider ?? null, expiresAt: c.expiresAt ?? null, refreshable: !!c.refreshToken || c.oauthProvider === 'threads', scopes: c.scopes ?? [], webhookUrl: this.studio.cfg.baseUrl + (c.oauthProvider === 'meta' ? (c.oauthAppScope === 'installation' ? '/webhooks/meta-global' : '/webhooks/meta/' + p.workspaceId) : '/webhooks/' + e.id) } }; }); }
+    list(p: Principal, bid: string): Bag[] { this.studio.scope(p, bid); return this.studio.store.list<Account>(p, 'account', bid).map(e => { const c = this.studio.hub.credentials(e), h = this.studio.store.db.prepare('SELECT * FROM connection_health WHERE account_id=?').get(e.id) as Bag | undefined; return { ...publicAccount(e), connection: { state: !e.data.enabled ? 'DISABLED' : c.expiresAt && c.expiresAt < Date.now() ? 'EXPIRED' : h?.state ?? 'UNVERIFIED', checkedAt: h?.checked_at ?? null, detail: h?.detail ?? 'Credenziali salvate. Verifica connessione non eseguita.', provider: c.oauthProvider ?? null, expiresAt: c.expiresAt ?? null, refreshable: !!c.refreshToken || ['threads', 'instagram'].includes(c.oauthProvider), scopes: c.scopes ?? [], webhookUrl: this.studio.cfg.baseUrl + (c.oauthProvider === 'meta' ? (c.oauthAppScope === 'installation' ? '/webhooks/meta-global' : '/webhooks/meta/' + p.workspaceId) : '/webhooks/' + e.id) } }; }); }
     private current(e: Entity<Account>): Entity<Account> { return this.studio.hub.account({ workspaceId: e.workspaceId, brandId: e.brandId, userId: 'oauth-maintenance', role: 'admin', via: 'system' }, e.id); }
     async credentials(input: Entity<Account>): Promise<Bag> {
         const e = this.current(input), c = this.studio.hub.credentials(e);
@@ -345,6 +376,10 @@ export class SocialOAuth {
             if (provider === 'threads') {
                 assert(c.expiresAt > Date.now(), 'TOKEN_EXPIRED', 'Token Threads scaduto: riconnettere');
                 b = (await this.http.request('https://graph.threads.net/refresh_access_token?' + new URLSearchParams({ grant_type: 'th_refresh_token', access_token: c.accessToken }))).body;
+            }
+            else if (provider === 'instagram') {
+                assert(c.expiresAt > Date.now(), 'TOKEN_EXPIRED', 'Token Instagram scaduto: riconnettere');
+                b = (await this.http.request('https://graph.instagram.com/refresh_access_token?' + new URLSearchParams({ grant_type: 'ig_refresh_token', access_token: c.accessToken }))).body;
             }
             else {
                 assert(c.refreshToken && (!c.refreshExpiresAt || c.refreshExpiresAt > Date.now()), 'TOKEN_EXPIRED', 'Nessun refresh token valido. Riconnettere il canale.');
@@ -400,7 +435,7 @@ export class SocialOAuth {
                 if (!e.data.enabled)
                     continue;
                 const c = this.studio.hub.credentials(e);
-                if (!c.oauthProvider || !c.expiresAt || c.expiresAt - Date.now() > 300000 || (!c.refreshToken && c.oauthProvider !== 'threads'))
+                if (!c.oauthProvider || !c.expiresAt || c.expiresAt - Date.now() > 300000 || (!c.refreshToken && !['threads', 'instagram'].includes(c.oauthProvider)))
                     continue;
                 const h = this.studio.store.db.prepare('SELECT * FROM connection_health WHERE account_id=?').get(e.id) as Bag | undefined;
                 if (h?.state === 'RECONNECT_REQUIRED' && Date.now() - Date.parse(h.checked_at) < 3600000)
