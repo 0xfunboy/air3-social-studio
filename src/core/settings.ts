@@ -20,7 +20,7 @@ export const ENV_FIELDS: Record<string, {
     PRIVACY_URL: { group: 'instance', help: 'Informativa privacy pubblicata dal gestore (HTTPS)' },
     TERMS_URL: { group: 'instance', help: 'Termini di servizio del gestore (HTTPS)' },
     ALLOW_REGISTRATION: { group: 'instance', help: 'true: consente la registrazione pubblica. false: solo inviti.' },
-    REQUIRE_EMAIL_VERIFICATION: { group: 'instance', help: 'true: la registrazione standard richiede verifica email via Resend. false: l’account è verificato subito.' },
+    REQUIRE_EMAIL_VERIFICATION: { group: 'instance', help: 'true (predefinito): verifica email via Resend. false: accesso senza verifica; l’email resta non verificata e non può conferire privilegi globali.' },
     LLM_PROVIDER: { group: 'models', help: 'gemini oppure compatible' },
     LLM_BASE_URL: { group: 'models', help: 'Endpoint del modello' },
     LLM_MODEL: { group: 'models', help: 'Identificativo esatto del modello disponibile sul tuo endpoint' },
@@ -45,9 +45,9 @@ export class Settings {
     private persisted(): Bag { const r = this.store.db.prepare("SELECT value FROM installation WHERE key='environment'").get() as Bag | undefined; return r ? decrypt<Bag>(r.value, this.cfg.masterKey, 'installation:environment') : {}; }
     values(): Bag { const v: Bag = { LLM_PROVIDER: this.cfg.llmProvider, LLM_BASE_URL: this.cfg.llmBase, LLM_MODEL: this.cfg.llmModel, LLM_API_KEY: this.cfg.llmKey, GEMINI_API_KEY: this.cfg.geminiKey, GEMINI_IMAGE_MODEL: this.cfg.imageModel, EMBEDDING_BASE_URL: this.cfg.embeddingBase, EMBEDDING_MODEL: this.cfg.embeddingModel, EMBEDDING_API_KEY: this.cfg.embeddingKey, META_GRAPH_VERSION: this.cfg.graphVersion, LINKEDIN_VERSION: this.cfg.linkedinVersion }; for (const k of Object.keys(ENV_FIELDS))
         if (process.env[k] !== undefined)
-            v[k] = process.env[k]; return { SITE_NAME: 'AIR3 Social Studio', ALLOW_REGISTRATION: 'false', REQUIRE_EMAIL_VERIFICATION: 'false', BASE_URL: this.cfg.baseUrl, SUPPORT_EMAIL: process.env.SUPPORT_EMAIL || 'support@localhost.test', PRIVACY_URL: `${this.cfg.baseUrl}/privacy`, TERMS_URL: `${this.cfg.baseUrl}/terms`, ...v, ...this.persisted() }; }
+            v[k] = process.env[k]; return { SITE_NAME: 'AIR3 Social Studio', ALLOW_REGISTRATION: 'false', REQUIRE_EMAIL_VERIFICATION: 'true', BASE_URL: this.cfg.baseUrl, SUPPORT_EMAIL: process.env.SUPPORT_EMAIL || 'support@localhost.test', PRIVACY_URL: `${this.cfg.baseUrl}/privacy`, TERMS_URL: `${this.cfg.baseUrl}/terms`, ...v, ...this.persisted() }; }
     value(k: string): string { return String(this.values()[k] ?? ''); }
-    public(): Bag { return { name: this.value('SITE_NAME'), version: '0.2.0', google: !!(this.value('GOOGLE_CLIENT_ID') && this.value('GOOGLE_CLIENT_SECRET')), registration: this.value('ALLOW_REGISTRATION') === 'true', emailVerificationRequired: this.value('REQUIRE_EMAIL_VERIFICATION') === 'true', emailEnabled: this.mailEnabled, supportEmail: this.value('SUPPORT_EMAIL'), privacyUrl: this.value('PRIVACY_URL'), termsUrl: this.value('TERMS_URL') }; }
+    public(): Bag { return { name: this.value('SITE_NAME'), version: '0.2.0', google: !!(this.value('GOOGLE_CLIENT_ID') && this.value('GOOGLE_CLIENT_SECRET')), registration: this.value('ALLOW_REGISTRATION') === 'true', emailVerificationRequired: this.value('REQUIRE_EMAIL_VERIFICATION') !== 'false', emailEnabled: this.mailEnabled, supportEmail: this.value('SUPPORT_EMAIL'), privacyUrl: this.value('PRIVACY_URL'), termsUrl: this.value('TERMS_URL') }; }
     get mailEnabled(): boolean { return !!(this.value('RESEND_API_KEY') && this.value('MAIL_FROM')); }
     read(p: Principal): Bag { this.auth.requireSiteAdmin(p); const v = this.values(); return { fields: Object.entries(ENV_FIELDS).map(([key, spec]) => ({ key, ...spec, value: spec.secret ? '' : v[key] ?? '', configured: !!v[key] })), effectiveBaseUrl: this.cfg.baseUrl, pendingRestart: !!v.BASE_URL && v.BASE_URL !== this.cfg.baseUrl, generatedFile: 'DATA_DIR/runtime.generated.env', preview: this.env(false) }; }
     validate(input: Bag): Bag {

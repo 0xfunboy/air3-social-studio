@@ -100,9 +100,9 @@ AIR3 Social Studio v2.0 include la delega automatica del ruolo di amministratore
 - **Identità Superadmin configurabile:** Imposta `SUPERADMIN_EMAIL=admin@iltuodominio.com` nel file `.env` (o tramite credenziali bootstrap).
 - **Livello di privilegio:** Superadmin Globale dell'installazione (`site_admins`) + Amministratore completo su tutti i workspace attivi e futuri.
 - **Meccanica di auto-promozione:**
-  - **Autenticazione Locale:** Il login o la registrazione con l'email configurata imposta automaticamente `verified=1`, `disabled=0`, inserisce l'utente in `site_admins` e concede il ruolo `admin` in tutti i workspace.
+  - **Autenticazione Locale:** Il login con password autentica soltanto account esistenti. Gli indirizzi amministrativi si creano tramite bootstrap locale, invito o Google verificato. La promozione richiede un account verificato e abilitato; non forza la verifica né riabilita utenti disabilitati.
   - **Federazione Google OIDC:** Al primo accesso con Google Identity, gli account corrispondenti all'email di amministrazione vengono associati, verificati e promossi a Superadmin senza interventi manuali nel database.
-  - **Verifica delle autorizzazioni:** A ogni emissione di sessione e controllo dei permessi, `siteAdmin()` restituisce `true`, sbloccando telemetria, gestione OAuth globale, audit log e workspace multi-tenant.
+  - **Verifica delle autorizzazioni:** Prima di emettere una sessione vengono controllati stato e verifica dell’account. `siteAdmin()` controlla il ruolo globale salvato e rifiuta account non verificati o disabilitati.
 
 ---
 
@@ -141,7 +141,7 @@ Il server si avvia su `http://127.0.0.1:3100`. Lo script di setup visualizza la 
 
 ## Accesso Superadmin via Variabile d'Ambiente
 
-Qualsiasi indirizzo specificato in `SUPERADMIN_EMAIL` nel file `.env` (oppure l'account di bootstrap iniziale) riceve automaticamente i privilegi completi di Superadmin:
+Un account verificato e abilitato con indirizzo specificato in `SUPERADMIN_EMAIL` o `SUPERADMIN_EMAILS` nel file `.env` (oppure il bootstrap locale iniziale) riceve i privilegi completi di Superadmin. Gli indirizzi possono essere separati da virgole; il login non crea account mancanti:
 
 ```env
 SUPERADMIN_EMAIL=admin@iltuodominio.com

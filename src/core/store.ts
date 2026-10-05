@@ -35,6 +35,7 @@ export class Store {
  CREATE TABLE IF NOT EXISTS workspace_settings(workspace_id TEXT NOT NULL,key TEXT NOT NULL,value TEXT NOT NULL,PRIMARY KEY(workspace_id,key));
  CREATE TABLE IF NOT EXISTS identities(provider TEXT NOT NULL,subject TEXT NOT NULL,user_id TEXT NOT NULL REFERENCES users(id),email TEXT NOT NULL,PRIMARY KEY(provider,subject),UNIQUE(provider,user_id));
  CREATE TABLE IF NOT EXISTS user_flags(user_id TEXT PRIMARY KEY REFERENCES users(id),verified INTEGER NOT NULL DEFAULT 1,disabled INTEGER NOT NULL DEFAULT 0);
+ CREATE TABLE IF NOT EXISTS unverified_access(user_id TEXT PRIMARY KEY REFERENCES users(id));
  CREATE TABLE IF NOT EXISTS auth_actions(token_hash TEXT PRIMARY KEY,kind TEXT NOT NULL,email TEXT NOT NULL,user_id TEXT,workspace_id TEXT,role TEXT,data TEXT NOT NULL,expires INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS session_recent(token_hash TEXT PRIMARY KEY,at INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS connection_grants(id TEXT PRIMARY KEY,workspace_id TEXT NOT NULL,brand_id TEXT NOT NULL,user_id TEXT NOT NULL,provider TEXT NOT NULL,data TEXT NOT NULL,expires INTEGER NOT NULL);

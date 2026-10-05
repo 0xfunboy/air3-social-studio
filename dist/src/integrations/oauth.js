@@ -2,12 +2,13 @@ import { randomBytes } from 'node:crypto';
 import { ProviderError } from '../core/http.js';
 import { publicAccount } from '../core/service.js';
 import { requireHuman, requireRole } from '../core/auth.js';
-import { encrypt, decrypt, equal } from '../core/crypto.js';
-import { assert, id, sha, text, now, safeError } from '../core/util.js';
+import { encrypt, decrypt, equal, hmac } from '../core/crypto.js';
+import { assert, id, sha, text, object, now, safeError } from '../core/util.js';
 import { credentialAad } from '../social/hub.js';
 import { cookieValue, flowCookie } from './identity.js';
 export const OAUTH = {
-    meta: { label: 'Meta Business', platforms: ['facebook', 'instagram', 'messenger', 'instagram-dm', 'whatsapp'], auth: 'https://www.facebook.com/{version}/dialog/oauth', token: 'https://graph.facebook.com/{version}/oauth/access_token', scopes: [], separator: ',', docs: 'https://developers.facebook.com/docs/facebook-login/facebook-login-for-business/' },
+    meta: { label: 'Facebook / Meta', platforms: ['facebook', 'instagram', 'messenger', 'instagram-dm', 'whatsapp'], auth: 'https://www.facebook.com/{version}/dialog/oauth', token: 'https://graph.facebook.com/{version}/oauth/access_token', scopes: [], separator: ',', docs: 'https://developers.facebook.com/docs/facebook-login/facebook-login-for-business/' },
+    instagram: { label: 'Instagram', platforms: ['instagram', 'instagram-dm'], auth: 'https://www.instagram.com/oauth/authorize', token: 'https://api.instagram.com/oauth/access_token', scopes: [], separator: ',', docs: 'https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/' },
     threads: { label: 'Threads', platforms: ['threads'], auth: 'https://www.threads.net/oauth/authorize', token: 'https://graph.threads.net/oauth/access_token', scopes: ['threads_basic', 'threads_content_publish', 'threads_manage_insights'], separator: ',', docs: 'https://www.postman.com/meta/threads/documentation/dht3nzz/threads-api' },
     tiktok: { label: 'TikTok', platforms: ['tiktok'], auth: 'https://www.tiktok.com/v2/auth/authorize/', token: 'https://open.tiktokapis.com/v2/oauth/token/', scopes: ['user.info.basic', 'video.publish'], separator: ',', docs: 'https://developers.tiktok.com/doc/login-kit-web/' },
     x: { label: 'X', platforms: ['x'], auth: 'https://x.com/i/oauth2/authorize', token: 'https://api.x.com/2/oauth2/token', scopes: ['tweet.read', 'tweet.write', 'users.read', 'offline.access'], pkce: true, basic: true, docs: 'https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code' },
@@ -22,7 +23,9 @@ export const OAUTH = {
 };
 const basic = (a) => 'Basic ' + Buffer.from(a.clientId + ':' + a.clientSecret).toString('base64');
 const bearer = (token) => ({ Authorization: 'Bearer ' + token });
-function tokenFields(b) { assert(typeof b.access_token === 'string' && b.access_token.length > 0, 'OAUTH_TOKEN', 'Il provider non ha restituito un access token'); return { accessToken: b.access_token, ...(b.refresh_token ? { refreshToken: b.refresh_token } : {}), ...(Number(b.expires_in) > 0 ? { expiresAt: Date.now() + Number(b.expires_in) * 1000 } : {}), ...(Number(b.refresh_expires_in ?? b.refresh_token_expires_in) > 0 ? { refreshExpiresAt: Date.now() + Number(b.refresh_expires_in ?? b.refresh_token_expires_in) * 1000 } : {}), ...(b.scope ? { scopes: String(b.scope).split(/[ ,]+/).filter(Boolean) } : {}), issuedAt: Date.now() }; }
+function tokenPayload(b) { if (!Array.isArray(b.data))
+    return b; assert(b.data.length === 1, 'OAUTH_TOKEN', 'Il provider ha restituito una risposta token ambigua'); return object(b.data[0]); }
+function tokenFields(input) { const b = tokenPayload(input), rawScopes = b.scope ?? b.permissions; assert(typeof b.access_token === 'string' && b.access_token.length > 0, 'OAUTH_TOKEN', 'Il provider non ha restituito un access token'); return { accessToken: b.access_token, ...(b.refresh_token ? { refreshToken: b.refresh_token } : {}), ...(Number(b.expires_in) > 0 ? { expiresAt: Date.now() + Number(b.expires_in) * 1000 } : {}), ...(Number(b.refresh_expires_in ?? b.refresh_token_expires_in) > 0 ? { refreshExpiresAt: Date.now() + Number(b.refresh_expires_in ?? b.refresh_token_expires_in) * 1000 } : {}), ...(rawScopes ? { scopes: String(rawScopes).split(/[ ,]+/).filter(Boolean) } : {}), issuedAt: Date.now() }; }
 export class SocialOAuth {
     studio;
     auth;
@@ -36,12 +39,49 @@ export class SocialOAuth {
         this.http = http;
         studio.hub.refreshCredentials = (e) => this.credentials(e);
     }
-    providerFor(platform) { return Object.entries(OAUTH).find(([, p]) => p.platforms.includes(platform))?.[0]; }
+    providerFor(platform, wid = '') {
+        if (platform === 'instagram' || platform === 'instagram-dm') {
+            for (const provider of ['instagram', 'meta']) {
+                const a = this.app(wid, provider);
+                if (a.clientId && a.clientSecret && a.enabled !== false)
+                    return provider;
+            }
+            return 'instagram';
+        }
+        return Object.entries(OAUTH).find(([, p]) => p.platforms.includes(platform))?.[0];
+    }
     storedApp(wid, provider, global = false) {
         const r = (global ? this.studio.store.db.prepare('SELECT value FROM installation WHERE key=?').get('oauth:' + provider) : this.studio.store.db.prepare('SELECT value FROM workspace_settings WHERE workspace_id=? AND key=?').get(wid, 'oauth:' + provider));
         return r ? { ...decrypt(r.value, this.studio.cfg.masterKey, global ? `installation:oauth:${provider}` : `oauth-app:${wid}:${provider}`), _scope: global ? 'installation' : 'workspace' } : {};
     }
-    app(wid, provider) { const local = this.storedApp(wid, provider); return local._scope ? local : this.storedApp(wid, provider, true); }
+    environmentApp(provider) {
+        const prefix = provider === 'meta' ? 'META' : provider === 'instagram' ? 'INSTAGRAM' : '';
+        if (!prefix)
+            return {};
+        const clientId = process.env[`${prefix}_CLIENT_ID`] ?? (provider === 'meta' ? process.env.FACEBOOK_CLIENT_ID : undefined) ?? '';
+        const clientSecret = process.env[`${prefix}_CLIENT_SECRET`] ?? (provider === 'meta' ? process.env.FACEBOOK_CLIENT_SECRET : undefined) ?? '';
+        if (!clientId || !clientSecret)
+            return {};
+        return {
+            clientId,
+            clientSecret,
+            enabled: true,
+            ...(process.env[`${prefix}_CONFIG_ID`] ? { configId: process.env[`${prefix}_CONFIG_ID`] } : {}),
+            ...(process.env[`${prefix}_BUSINESS_ID`] ? { businessId: process.env[`${prefix}_BUSINESS_ID`] } : {}),
+            webhookVerifyToken: process.env[`${prefix}_WEBHOOK_VERIFY_TOKEN`] || hmac('air3:webhook:' + provider, clientSecret),
+            _scope: 'installation',
+            _environment: true
+        };
+    }
+    sharedApp(provider) { const stored = this.storedApp('', provider, true); return stored._scope ? stored : this.environmentApp(provider); }
+    app(wid, provider) { const local = this.storedApp(wid, provider); return local._scope ? local : this.sharedApp(provider); }
+    webhookApp(wid, provider, global = false) {
+        assert(['meta', 'instagram'].includes(provider), 'OAUTH_PROVIDER', 'Provider webhook non supportato');
+        const a = global ? this.sharedApp(provider) : this.storedApp(wid, provider);
+        assert(a.clientId, 'NOT_FOUND', 'Webhook non trovato', 404);
+        assert(a.enabled !== false && a.clientSecret, 'WEBHOOK', 'App disabilitata', 403);
+        return a;
+    }
     apps(p, global = false) {
         if (global)
             this.auth.requireSiteAdmin(p);
@@ -49,7 +89,7 @@ export class SocialOAuth {
             requireRole(p, 'admin');
             requireHuman(p);
         }
-        return Object.entries(OAUTH).map(([provider, spec]) => { const a = global ? this.storedApp(p.workspaceId, provider, true) : this.app(p.workspaceId, provider); return { provider, ...spec, token: undefined, auth: undefined, source: a._scope ?? (global ? 'installation' : 'workspace'), inherited: !global && a._scope === 'installation', clientId: a.clientId ?? '', configured: !!(a.clientId && a.clientSecret && a.enabled !== false), hasSecret: !!a.clientSecret, hasBotToken: !!a.botToken, webhookUrl: this.studio.cfg.baseUrl + (a._scope === 'installation' ? '/webhooks/meta-global' : '/webhooks/meta/' + p.workspaceId), configId: a.configId ?? '', businessId: a.businessId ?? '', instance: a.instance ?? '', enabled: a.enabled !== false, redirectUri: this.studio.cfg.baseUrl + `/oauth/${provider}/callback` }; });
+        return Object.entries(OAUTH).map(([provider, spec]) => { const a = global ? this.sharedApp(provider) : this.app(p.workspaceId, provider); return { provider, ...spec, token: undefined, auth: undefined, source: a._scope ?? (global ? 'installation' : 'workspace'), environmentManaged: !!a._environment, inherited: !global && a._scope === 'installation', clientId: a.clientId ?? '', configured: !!(a.clientId && a.clientSecret && a.enabled !== false), hasSecret: !!a.clientSecret, hasBotToken: !!a.botToken, webhookUrl: this.studio.cfg.baseUrl + (a._scope === 'installation' ? `/webhooks/${provider}-global` : `/webhooks/${provider}/` + p.workspaceId), configId: a.configId ?? '', businessId: a.businessId ?? '', instance: a.instance ?? '', enabled: a.enabled !== false, redirectUri: this.studio.cfg.baseUrl + `/oauth/${provider}/callback` }; });
     }
     saveApp(p, provider, input, global = false) {
         if (global)
@@ -60,8 +100,9 @@ export class SocialOAuth {
         }
         assert(OAUTH[provider], 'OAUTH_PROVIDER', 'Provider non supportato');
         // A workspace override must never copy a shared installation secret into customer-owned data.
-        const prior = this.storedApp(p.workspaceId, provider, global), a = { ...prior, clientId: text(input.clientId, 'Client ID', 500), enabled: input.enabled !== false, webhookVerifyToken: prior.webhookVerifyToken ?? randomBytes(32).toString('base64url') };
+        const prior = global ? this.sharedApp(provider) : this.storedApp(p.workspaceId, provider), a = { ...prior, clientId: text(input.clientId, 'Client ID', 500), enabled: input.enabled !== false, webhookVerifyToken: prior.webhookVerifyToken ?? randomBytes(32).toString('base64url') };
         delete a._scope;
+        delete a._environment;
         for (const field of ['clientSecret', 'botToken', 'configId', 'businessId', 'instance'])
             if (input[field] !== undefined && String(input[field]).trim())
                 a[field] = text(input[field], field, 5000);
@@ -96,16 +137,22 @@ export class SocialOAuth {
                 return ['pages_show_list', 'pages_read_engagement', 'pages_messaging', 'pages_manage_metadata'];
             return ['pages_show_list', 'pages_read_engagement', 'pages_manage_posts'];
         }
+        if (provider === 'instagram') {
+            if (platform === 'instagram-dm')
+                return ['instagram_business_basic', 'instagram_business_manage_messages'];
+            return ['instagram_business_basic', 'instagram_business_content_publish'];
+        }
         if (platform === 'linkedin-page')
             return ['openid', 'profile', 'w_organization_social', 'rw_organization_admin'];
         return OAUTH[provider].scopes;
     }
-    start(p, brandId, platform) {
+    start(p, brandId, platform, requestedProvider) {
         requireRole(p, 'admin');
         requireHuman(p);
         this.studio.scope(p, brandId);
-        const provider = this.providerFor(platform);
+        const provider = requestedProvider ?? this.providerFor(platform, p.workspaceId);
         assert(provider, 'OAUTH_UNAVAILABLE', 'Questo canale usa un collegamento guidato con token o Postiz');
+        assert(OAUTH[provider]?.platforms.includes(platform), 'OAUTH_PROVIDER', 'Provider non valido per questo canale');
         const a = this.app(p.workspaceId, provider);
         assert(a.clientId && a.clientSecret && a.enabled !== false, 'OAUTH_APP_REQUIRED', 'Configura prima l’app developer di ' + OAUTH[provider].label);
         if (provider === 'discord')
@@ -164,6 +211,11 @@ export class SocialOAuth {
             const exchanged = await this.http.request('https://graph.threads.net/access_token?' + new URLSearchParams({ grant_type: 'th_exchange_token', client_secret: a.clientSecret, access_token: c.accessToken }));
             c = { ...c, ...tokenFields(exchanged.body) };
         }
+        if (provider === 'instagram') {
+            const grantedScopes = c.scopes;
+            const exchanged = await this.http.request('https://graph.instagram.com/access_token?' + new URLSearchParams({ grant_type: 'ig_exchange_token', client_secret: a.clientSecret, access_token: c.accessToken }));
+            c = { ...c, ...tokenFields(exchanged.body), ...(grantedScopes ? { scopes: grantedScopes } : {}) };
+        }
         if (provider === 'meta') {
             const exchanged = await this.http.request(this.endpoint(provider, 'token', a) + '?' + new URLSearchParams({ grant_type: 'fb_exchange_token', client_id: a.clientId, client_secret: a.clientSecret, fb_exchange_token: c.accessToken }));
             c = { ...c, ...tokenFields(exchanged.body) };
@@ -186,7 +238,11 @@ export class SocialOAuth {
     async discover(provider, platform, c, a, response) {
         const out = [], push = (targetId, name, credentials = c, options = {}) => { assert(targetId, 'OAUTH_TARGET', 'ID destinazione mancante'); out.push({ key: id(), platform, targetId: String(targetId), name: String(name ?? targetId).slice(0, 150), credentials, options }); };
         const t = c.accessToken;
-        if (provider === 'meta') {
+        if (provider === 'instagram') {
+            const me = await this.get('https://graph.instagram.com/' + this.studio.cfg.graphVersion + '/me?fields=user_id,username,name,account_type', t);
+            push(me.user_id, me.username ?? me.name ?? 'Instagram', { ...c, appSecret: a.clientSecret, webhookVerifyToken: a.webhookVerifyToken }, { login: 'instagram', accountType: me.account_type });
+        }
+        else if (provider === 'meta') {
             const base = 'https://graph.facebook.com/' + this.studio.cfg.graphVersion;
             if (platform === 'whatsapp') {
                 const businesses = a.businessId ? [{ id: a.businessId }] : (await this.get(base + '/me/businesses?fields=id,name&limit=100', t)).data ?? [];
@@ -309,7 +365,7 @@ export class SocialOAuth {
         });
     }
     health(aid, state, detail) { this.studio.store.db.prepare('INSERT INTO connection_health VALUES (?,?,?,?) ON CONFLICT(account_id) DO UPDATE SET state=excluded.state,checked_at=excluded.checked_at,detail=excluded.detail').run(aid, state, now(), detail.slice(0, 1000)); }
-    list(p, bid) { this.studio.scope(p, bid); return this.studio.store.list(p, 'account', bid).map(e => { const c = this.studio.hub.credentials(e), h = this.studio.store.db.prepare('SELECT * FROM connection_health WHERE account_id=?').get(e.id); return { ...publicAccount(e), connection: { state: !e.data.enabled ? 'DISABLED' : c.expiresAt && c.expiresAt < Date.now() ? 'EXPIRED' : h?.state ?? 'UNVERIFIED', checkedAt: h?.checked_at ?? null, detail: h?.detail ?? 'Credenziali salvate. Verifica connessione non eseguita.', provider: c.oauthProvider ?? null, expiresAt: c.expiresAt ?? null, refreshable: !!c.refreshToken || c.oauthProvider === 'threads', scopes: c.scopes ?? [], webhookUrl: this.studio.cfg.baseUrl + (c.oauthProvider === 'meta' ? (c.oauthAppScope === 'installation' ? '/webhooks/meta-global' : '/webhooks/meta/' + p.workspaceId) : '/webhooks/' + e.id) } }; }); }
+    list(p, bid) { this.studio.scope(p, bid); return this.studio.store.list(p, 'account', bid).map(e => { const c = this.studio.hub.credentials(e), h = this.studio.store.db.prepare('SELECT * FROM connection_health WHERE account_id=?').get(e.id); return { ...publicAccount(e), connection: { state: !e.data.enabled ? 'DISABLED' : c.expiresAt && c.expiresAt < Date.now() ? 'EXPIRED' : h?.state ?? 'UNVERIFIED', checkedAt: h?.checked_at ?? null, detail: h?.detail ?? 'Credenziali salvate. Verifica connessione non eseguita.', provider: c.oauthProvider ?? null, expiresAt: c.expiresAt ?? null, refreshable: !!c.refreshToken || ['threads', 'instagram'].includes(c.oauthProvider), scopes: c.scopes ?? [], webhookUrl: this.studio.cfg.baseUrl + (['meta', 'instagram'].includes(c.oauthProvider) ? (c.oauthAppScope === 'installation' ? `/webhooks/${c.oauthProvider}-global` : `/webhooks/${c.oauthProvider}/` + p.workspaceId) : '/webhooks/' + e.id) } }; }); }
     current(e) { return this.studio.hub.account({ workspaceId: e.workspaceId, brandId: e.brandId, userId: 'oauth-maintenance', role: 'admin', via: 'system' }, e.id); }
     async credentials(input) {
         const e = this.current(input), c = this.studio.hub.credentials(e);
@@ -339,6 +395,10 @@ export class SocialOAuth {
             if (provider === 'threads') {
                 assert(c.expiresAt > Date.now(), 'TOKEN_EXPIRED', 'Token Threads scaduto: riconnettere');
                 b = (await this.http.request('https://graph.threads.net/refresh_access_token?' + new URLSearchParams({ grant_type: 'th_refresh_token', access_token: c.accessToken }))).body;
+            }
+            else if (provider === 'instagram') {
+                assert(c.expiresAt > Date.now(), 'TOKEN_EXPIRED', 'Token Instagram scaduto: riconnettere');
+                b = (await this.http.request('https://graph.instagram.com/refresh_access_token?' + new URLSearchParams({ grant_type: 'ig_refresh_token', access_token: c.accessToken }))).body;
             }
             else {
                 assert(c.refreshToken && (!c.refreshExpiresAt || c.refreshExpiresAt > Date.now()), 'TOKEN_EXPIRED', 'Nessun refresh token valido. Riconnettere il canale.');
@@ -394,7 +454,7 @@ export class SocialOAuth {
                 if (!e.data.enabled)
                     continue;
                 const c = this.studio.hub.credentials(e);
-                if (!c.oauthProvider || !c.expiresAt || c.expiresAt - Date.now() > 300000 || (!c.refreshToken && c.oauthProvider !== 'threads'))
+                if (!c.oauthProvider || !c.expiresAt || c.expiresAt - Date.now() > 300000 || (!c.refreshToken && !['threads', 'instagram'].includes(c.oauthProvider)))
                     continue;
                 const h = this.studio.store.db.prepare('SELECT * FROM connection_health WHERE account_id=?').get(e.id);
                 if (h?.state === 'RECONNECT_REQUIRED' && Date.now() - Date.parse(h.checked_at) < 3600000)
@@ -424,15 +484,16 @@ export class SocialOAuth {
         while (this.maintaining)
             await new Promise(r => setTimeout(r, 25));
     }
-    webhookConfig(p, global = false) {
+    webhookConfig(p, global = false, provider = 'meta') {
         requireRole(p, 'admin');
         requireHuman(p);
         if (global)
             this.auth.requireSiteAdmin(p);
-        const a = global ? this.storedApp(p.workspaceId, 'meta', true) : this.app(p.workspaceId, 'meta');
+        assert(['meta', 'instagram'].includes(provider), 'OAUTH_PROVIDER', 'Provider webhook non supportato');
+        const a = global ? this.sharedApp(provider) : this.app(p.workspaceId, provider);
         assert(a.clientId && a.webhookVerifyToken, 'OAUTH_APP_REQUIRED', 'Configurare l’app Meta');
         const managed = a._scope === 'installation' && !this.auth.siteAdmin(p.userId);
-        return { url: this.studio.cfg.baseUrl + (a._scope === 'installation' ? '/webhooks/meta-global' : '/webhooks/meta/' + p.workspaceId), managed, verifyToken: managed ? undefined : a.webhookVerifyToken, configuration: managed ? 'La callback dell’app condivisa è amministrata dal gestore. Non serve copiare segreti nel workspace.' : 'Registrare callback e token nella console Meta, selezionare i campi messages/message status e le risorse autorizzate. La sottoscrizione richiede i permessi approvati dal provider.' };
+        return { url: this.studio.cfg.baseUrl + (a._scope === 'installation' ? `/webhooks/${provider}-global` : `/webhooks/${provider}/` + p.workspaceId), managed, verifyToken: managed ? undefined : a.webhookVerifyToken, configuration: managed ? 'La callback dell’app condivisa è amministrata dal gestore. Non serve copiare segreti nel workspace.' : 'Registrare callback e token nella console Meta, selezionare i campi messages/message status e le risorse autorizzate. La sottoscrizione richiede i permessi approvati dal provider.' };
     }
     async verify(p, accountId) {
         requireRole(p, 'admin');

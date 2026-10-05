@@ -72,7 +72,8 @@ export class ExperienceApi {
         }
         if (path === '/api/auth/signup') {
             await identity.signup(b, ip);
-            send(res, { message: 'Se l’indirizzo è idoneo, riceverai un’email per completare la registrazione.' }, 202);
+            const verificationRequired = settings.value('REQUIRE_EMAIL_VERIFICATION') !== 'false';
+            send(res, { emailVerificationRequired: verificationRequired, message: verificationRequired ? 'Se l’indirizzo è idoneo, riceverai un’email per completare la registrazione.' : 'Registrazione completata. Se l’indirizzo è idoneo, puoi accedere con la password scelta.' }, 202);
             return true;
         }
         if (path === '/api/auth/forgot' || path === '/api/auth/resend') {
@@ -236,19 +237,21 @@ export class ExperienceApi {
             send(res, { ok: true });
             return true;
         }
-        if (path === '/api/oauth/meta/webhook' && method === 'GET') {
+        const workspaceWebhook = /^\/api\/oauth\/(meta|instagram)\/webhook$/.exec(path);
+        if (workspaceWebhook && method === 'GET') {
             assert(this.auth.recent(req), 'REAUTH_REQUIRED', 'Conferma la tua identità', 403);
-            send(res, oauth.webhookConfig(p));
+            send(res, oauth.webhookConfig(p, false, workspaceWebhook[1]!));
             return true;
         }
         if (path === '/api/admin/oauth/apps' && method === 'GET') {
             send(res, oauth.apps(p, true));
             return true;
         }
-        if (path === '/api/admin/oauth/meta/webhook' && method === 'GET') {
+        const installationWebhook = /^\/api\/admin\/oauth\/(meta|instagram)\/webhook$/.exec(path);
+        if (installationWebhook && method === 'GET') {
             this.auth.requireSiteAdmin(p);
             assert(this.auth.recent(req), 'REAUTH_REQUIRED', 'Conferma la tua identità', 403);
-            send(res, oauth.webhookConfig(p, true));
+            send(res, oauth.webhookConfig(p, true, installationWebhook[1]!));
             return true;
         }
         const sharedApp = /^\/api\/admin\/oauth\/apps\/([a-z]+)$/.exec(path);
@@ -278,7 +281,8 @@ export class ExperienceApi {
         const start = /^\/api\/brands\/([a-f0-9]{32})\/oauth\/([a-z-]+)\/start$/.exec(path);
         if (start && method === 'POST') {
             identity.limit('oauth-start:' + p.userId, 40);
-            const r = oauth.start(p, start[1]!, start[2] as Platform);
+            const b = await body(req);
+            const r = oauth.start(p, start[1]!, start[2] as Platform, b.provider === undefined ? undefined : text(b.provider, 'provider', 50));
             res.setHeader('Set-Cookie', r.cookie);
             send(res, { url: r.url });
             return true;

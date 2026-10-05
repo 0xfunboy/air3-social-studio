@@ -1308,10 +1308,11 @@ function channelCatalog(compact = false) {
     const catalog = state.status?.platforms || {};
     const keys = compact ? ['facebook', 'instagram', 'whatsapp', 'threads', 'tiktok', 'x', 'linkedin', 'linkedin-page', 'telegram', 'youtube'] : Object.keys(catalog);
     return `<div class="connection-grid ${compact ? 'compact' : ''}">${keys.filter(p => catalog[p]).map(p => {
-        const app = oauthApps.find(a => a.platforms.includes(p));
+        const apps = oauthApps.filter(a => a.platforms.includes(p));
+        const app = apps.find(a => a.provider === 'instagram' && a.configured) || apps.find(a => a.configured) || apps.find(a => a.provider === 'instagram') || apps[0];
         const n = connections.filter(c => c.data.platform === p && c.data.enabled).length;
         const managedSocial = app && ['meta', 'instagram'].includes(app.provider);
-        const subLabel = app ? (managedSocial ? (p === 'instagram' || p === 'instagram-dm' ? 'Login Instagram' : 'Login Facebook') : 'OAuth · ' + esc(app.label)) : p === 'telegram' ? (isIt ? 'Bot e canale verificati' : 'Verified bot & channel') : (isIt ? 'Credenziali / Postiz' : 'Credentials / Postiz');
+        const subLabel = app ? (managedSocial ? (app.provider === 'instagram' ? 'Login Instagram' : 'Login Facebook') : 'OAuth · ' + esc(app.label)) : p === 'telegram' ? (isIt ? 'Bot e canale verificati' : 'Verified bot & channel') : (isIt ? 'Credenziali / Postiz' : 'Credentials / Postiz');
         const connectText = isIt ? 'Collega' : 'Connect';
         const configOAuthText = isIt ? 'Configura OAuth' : 'Configure OAuth';
         const telegramBtnText = isIt ? 'Collega bot' : 'Connect bot';
@@ -1320,16 +1321,20 @@ function channelCatalog(compact = false) {
         let actions = adminOnlyNote;
         if (may('admin')) {
             if (app?.configured) {
-                actions = button(icon('link') + ' ' + connectText, 'connect-oauth', 'primary small', dataId(p));
-                if (!managedSocial)
+                actions = button(icon('link') + ' ' + connectText, 'connect-oauth', 'primary small', dataId(p) + ' data-provider="' + esc(app.provider) + '"');
+                if (!managedSocial || !app.inherited)
                     actions += button(icon('settings'), 'configure-oauth', 'ghost icon-btn', dataId(app.provider) + ' aria-label="' + (isIt ? 'Configura app ' : 'Configure app ') + esc(app.label) + '"');
-                else if (state.me.siteAdmin)
+                if (managedSocial && state.me.siteAdmin)
                     actions += button(icon('settings'), 'configure-shared-oauth', 'ghost icon-btn', dataId(app.provider) + ' aria-label="' + (isIt ? 'Configura app condivisa ' : 'Configure shared app ') + esc(app.label) + '"');
+                if (managedSocial && app.inherited)
+                    actions += button(isIt ? 'App del workspace' : 'Workspace app', 'configure-oauth', 'ghost small', dataId(app.provider));
+                for (const alternative of apps.filter(a => a.configured && a.provider !== app.provider))
+                    actions += button(isIt ? 'Collega con ' + alternative.label : 'Connect with ' + alternative.label, 'connect-oauth', 'small', dataId(p) + ' data-provider="' + esc(alternative.provider) + '"');
             }
             else if (managedSocial) {
-                actions = state.me.siteAdmin
-                    ? button(icon('settings') + ' ' + (isIt ? 'Configura app' : 'Configure app'), 'configure-shared-oauth', 'small', dataId(app.provider))
-                    : `<small>${isIt ? 'L’app viene configurata una sola volta dal gestore. Poi qui comparirà «Collega».' : 'The app is configured once by the operator. Then “Connect” will appear here.'}</small>`;
+                actions = button(icon('settings') + ' ' + (isIt ? 'App del workspace' : 'Workspace app'), 'configure-oauth', 'small', dataId(app.provider));
+                if (state.me.siteAdmin)
+                    actions += button(icon('settings') + ' ' + (isIt ? 'App condivisa' : 'Shared app'), 'configure-shared-oauth', 'small', dataId(app.provider));
             }
             else if (app)
                 actions = button(icon('settings') + ' ' + configOAuthText, 'configure-oauth', 'small', dataId(app.provider));
@@ -1387,7 +1392,9 @@ function envForm(group, compact = false) {
     return `<form class="form env-form" id="environment-form"><input type="hidden" name="group" value="${group}"><div class="form-row">${fs.map(f => {
         let control;
         if (f.key === 'ALLOW_REGISTRATION')
-            control = select(f.key, friendly[f.key], [{ value: 'false', label: isIt ? 'Solo su invito' : 'Invite only' }, { value: 'true', label: isIt ? 'Aperta, con email verificata' : 'Open, with verified email' }], f.value || 'false');
+            control = select(f.key, friendly[f.key], [{ value: 'false', label: isIt ? 'Solo su invito' : 'Invite only' }, { value: 'true', label: isIt ? 'Aperta' : 'Open' }], f.value || 'false');
+        else if (f.key === 'REQUIRE_EMAIL_VERIFICATION')
+            control = select(f.key, isIt ? 'Verifica email' : 'Email verification', [{ value: 'true', label: isIt ? 'Obbligatoria (consigliata)' : 'Required (recommended)' }, { value: 'false', label: isIt ? 'Accesso con email non verificata' : 'Allow unverified email access' }], f.value || 'true');
         else if (f.key === 'LLM_PROVIDER')
             control = select(f.key, friendly[f.key], [{ value: 'gemini', label: 'Google Gemini' }, { value: 'compatible', label: isIt ? 'API compatibile / modello locale' : 'Compatible API / local model' }], f.value || state.status?.model?.provider || 'gemini');
         else
@@ -1397,7 +1404,7 @@ function envForm(group, compact = false) {
 }
 function sharedAppsPage() {
     const isIt = currentLang === 'it';
-    return `<div class="callout">${isIt ? 'Configura una sola volta le app developer dell’installazione. I clienti vedranno «Collega» e autorizzeranno i propri account. Il client secret rimane sul server; un workspace può scegliere un’app propria.' : 'Configure the installation developer apps once. Clients will see "Connect" and authorize their own accounts. The client secret remains on the server; a workspace can configure its own app.'}</div><div class="platform-grid">${globalOAuthApps.map(a => `<article class="connection-card"><div class="connection-title">${socialMark(a.platforms[0])}<span><h3>${esc(a.label)}</h3><small>${a.configured ? (isIt ? 'App condivisa configurata' : 'Shared app configured') : (isIt ? 'Da configurare' : 'To configure')}</small></span></div><p>${esc(a.platforms.map(p => state.status.platforms[p]?.label || p).join(' · '))}</p><div class="connection-actions">${button(icon('settings') + ' ' + (isIt ? 'Configura' : 'Configure'), 'configure-shared-oauth', 'small', dataId(a.provider))}${a.provider === 'meta' && a.configured ? button('Webhook', 'shared-meta-webhook', 'small') : ''}</div></article>`).join('')}</div>`;
+    return `<div class="callout">${isIt ? 'Configura una sola volta le app developer dell’installazione. I clienti vedranno «Collega» e autorizzeranno i propri account. Il client secret rimane sul server; un workspace può scegliere un’app propria.' : 'Configure the installation developer apps once. Clients will see "Connect" and authorize their own accounts. The client secret remains on the server; a workspace can configure its own app.'}</div><div class="platform-grid">${globalOAuthApps.map(a => `<article class="connection-card"><div class="connection-title">${socialMark(a.platforms[0])}<span><h3>${esc(a.label)}</h3><small>${a.configured ? (isIt ? 'App condivisa configurata' : 'Shared app configured') : (isIt ? 'Da configurare' : 'To configure')}</small></span></div><p>${esc(a.platforms.map(p => state.status.platforms[p]?.label || p).join(' · '))}</p><div class="connection-actions">${button(icon('settings') + ' ' + (isIt ? 'Configura' : 'Configure'), 'configure-shared-oauth', 'small', dataId(a.provider))}${['meta', 'instagram'].includes(a.provider) && a.configured ? button('Webhook', 'shared-social-webhook', 'small', dataId(a.provider)) : ''}</div></article>`).join('')}</div>`;
 }
 function adminPage() {
     const isIt = currentLang === 'it';
@@ -1593,21 +1600,26 @@ async function grantDialog(id) {
         isIt ? 'Collega gli account selezionati' : 'Connect selected accounts'
     );
 }
-async function openOAuthWindow(platform) {
-    const isIt = currentLang === 'it';
-    const r = await api(base() + '/oauth/' + platform + '/start', 'POST', {});
+async function openOAuthWindow(platform, provider) {
     const mobile = matchMedia('(max-width: 720px)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    if (mobile) {
-        location.assign(r.url);
-        return;
-    }
     const width = 560, height = 760, left = Math.max(0, Math.round((screen.width - width) / 2)), top = Math.max(0, Math.round((screen.height - height) / 2));
-    const popup = window.open(r.url, 'air3-social-oauth', `popup=yes,width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`);
+    // Open during the click gesture, before the request consumes browser activation.
+    const popup = mobile ? null : window.open('', '_blank', `popup=yes,width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`);
+    let r;
+    try {
+        r = await api(base() + '/oauth/' + platform + '/start', 'POST', provider ? { provider } : {});
+    }
+    catch (error) {
+        try { popup?.close(); } catch { }
+        throw error;
+    }
     if (!popup) {
         location.assign(r.url);
         return;
     }
-    popup.focus();
+    if (popup.closed)
+        throw new Error(oauthError('OAUTH_CANCELLED'));
+    try { popup.focus(); } catch { }
     await new Promise((resolve, reject) => {
         let done = false, poll = 0, timeout = 0;
         const finish = (error, grant) => {
@@ -1630,6 +1642,10 @@ async function openOAuthWindow(platform) {
         };
         addEventListener('message', onMessage);
         poll = setInterval(() => {
+            if (popup.closed) {
+                finish('OAUTH_CANCELLED', '');
+                return;
+            }
             try {
                 if (popup.location.origin !== location.origin || popup.location.pathname !== '/app')
                     return;
@@ -1640,6 +1656,8 @@ async function openOAuthWindow(platform) {
             catch { /* Cross-origin while the provider owns the popup. */ }
         }, 300);
         timeout = setTimeout(() => finish('OAUTH_TIMEOUT', ''), 5 * 60 * 1000);
+        try { popup.location.replace(r.url); }
+        catch { finish('OAUTH_CANCELLED', ''); }
     });
 }
 async function commandPalette() { modal(currentLang === 'it' ? 'Dove vuoi andare?' : 'Where do you want to go?', currentLang === 'it' ? 'Cerca una sezione, un contenuto o un canale del brand.' : 'Search for a section, content, or brand channel.', `<input id="command-search" class="command-input" type="search" aria-label="${esc(t('searchStudio'))}" placeholder="${currentLang === 'it' ? 'Calendario, un titolo, un canale…' : 'Calendar, title, channel…'}" autofocus><div class="command-results" id="command-results"></div>`); let items = Object.entries(labels).filter(([k]) => !['team', 'setup'].includes(k) || may('admin')).filter(([k]) => k !== 'admin' || state.me.siteAdmin).map(([id, label]) => ({ label, id, icon: id })); const draw = q => { $('#command-results').innerHTML = items.filter(x => x.label.toLowerCase().includes(q.toLowerCase()) || (labelsMap.it[x.id] && labelsMap.it[x.id].toLowerCase().includes(q.toLowerCase())) || (labelsMap.en[x.id] && labelsMap.en[x.id].toLowerCase().includes(q.toLowerCase()))).slice(0, 15).map(x => `<a href="#${esc(x.id)}" data-action="command-go" data-id="${esc(x.id)}">${icon(x.icon || 'contents')}<span>${esc(x.label)}</span>${icon('arrow')}</a>`).join('') || `<p class="subtle">${currentLang === 'it' ? 'Nessun risultato.' : 'No results.'}</p>`; }; draw(''); $('#command-search').oninput = ev => draw(ev.target.value); $('#command-search').focus(); if (state.brand) {
@@ -1717,8 +1735,8 @@ async function action(name, idValue, el) {
                 },
                 isIt ? 'Attiva webhook' : 'Activate webhook'
             );
-        if (e.connection?.provider === 'meta') {
-            const w = await api('/api/oauth/meta/webhook');
+        if (['meta', 'instagram'].includes(e.connection?.provider)) {
+            const w = await api('/api/oauth/' + e.connection.provider + '/webhook');
             modal(
                 isIt ? 'Configura webhook Meta' : 'Configure Meta Webhook',
                 isIt ? 'Registra questa callback nella console developer della tua app. Il token di verifica non è un access token.' : 'Register this callback in your app developer console. The verify token is not an access token.',
@@ -1733,8 +1751,8 @@ async function action(name, idValue, el) {
     }
     if (name === 'configure-shared-oauth')
         return configureOAuth(idValue, true);
-    if (name === 'shared-meta-webhook') {
-        const w = await api('/api/admin/oauth/meta/webhook');
+    if (name === 'shared-meta-webhook' || name === 'shared-social-webhook') {
+        const w = await api('/api/admin/oauth/' + (idValue || 'meta') + '/webhook');
         return modal(
             isIt ? 'Webhook Meta dell’installazione' : 'Installation Meta Webhook',
             isIt ? 'Una callback per tutti i workspace che usano l’app del gestore.' : 'One callback for all workspaces using the operator app.',
@@ -1755,7 +1773,7 @@ async function action(name, idValue, el) {
     if (name === 'configure-oauth')
         return configureOAuth(idValue);
     if (name === 'connect-oauth') {
-        await openOAuthWindow(idValue);
+        await openOAuthWindow(idValue, el?.dataset.provider);
         return;
     }
     if (name === 'telegram-connect')
@@ -1969,7 +1987,7 @@ else if (path === '/app') {
         }
         catch { /* Parent polling is the fallback. */ }
     }
-    try {
+    else try {
         const params = new URLSearchParams(location.search);
         if (params.has('workspace'))
             state.workspace = params.get('workspace');

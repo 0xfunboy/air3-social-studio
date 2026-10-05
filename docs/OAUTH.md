@@ -12,6 +12,8 @@ Le app developer devono essere create e abilitate dall’operatore nei portali u
 
 **App del workspace:** Canali → Configura OAuth. Le impostazioni locali prevalgono sulla app condivisa. Se stai creando un override devi inserire il tuo secret. Il pulsante “Rimuovi override e usa app del gestore” elimina la configurazione locale; i canali autorizzati con un’altra app vanno riconnessi. Disabilitare una app blocca l’utilizzo dei suoi token, anche se non ancora scaduti.
 
+Meta e Instagram possono anche usare `META_CLIENT_ID`/`META_CLIENT_SECRET` e `INSTAGRAM_CLIENT_ID`/`INSTAGRAM_CLIENT_SECRET` nell’ambiente del server. L’ordine di precedenza è: app del workspace, app condivisa nel database, app da ambiente. I rispettivi `*_WEBHOOK_VERIFY_TOKEN` sono opzionali: in assenza il server deriva un token stabile dal secret, visibile soltanto al site admin. La configurazione effettiva viene usata sia da OAuth sia dai webhook; una app disabilitata nel database non riattiva il fallback da ambiente.
+
 Il callback usa stato casuale monouso con scadenza, cookie di binding, identità di sessione, workspace e brand. Il codice viene scambiato solo dopo tali verifiche. PKCE è impiegato nei flussi configurati che lo supportano (Google, X, YouTube); gli altri usano codice + secret secondo il contratto del provider. Non viene dichiarato PKCE universale.
 
 Le destinazioni trovate vengono tenute in un grant cifrato per 15 minuti. L’utente seleziona esplicitamente i target, che devono appartenere al grant. Cambiare l’app durante il flusso ne invalida la selezione. La discovery è limitata e non promette un elenco illimitato di risorse in organizzazioni molto grandi.
@@ -37,6 +39,7 @@ Tutte sono mostrate e copiabili dalla UI; sostituisci l’origin con quella effe
 | Famiglia | Callback | Configurazione / scope impiegati |
 |---|---|---|
 | Meta | `/oauth/meta/callback` | App Business, Graph version esplicita; scope scelti per Pages, IG, Messenger o WhatsApp; configuration ID facoltativo |
+| Instagram Login | `/oauth/instagram/callback` | `instagram_business_basic` + `instagram_business_content_publish`, oppure `instagram_business_manage_messages` per Direct |
 | Threads | `/oauth/threads/callback` | `threads_basic`, `threads_content_publish`, `threads_manage_insights` |
 | TikTok | `/oauth/tiktok/callback` | Client key/secret, Login Kit Web, `user.info.basic`, `video.publish`; permessi/audit separati |
 | X | `/oauth/x/callback` | Confidential Web app, PKCE, `tweet.read tweet.write users.read offline.access` |
@@ -59,7 +62,9 @@ Scope completi per Meta in `SocialOAuth.scopes()`:
 
 Se il provider restituisce gli scope concessi vengono controllati; se non li restituisce, la UI lo dichiara. Il controllo di identità/target non prova il diritto a ogni formato o metrica. I permessi avanzati dipendono dall’abilitazione del prodotto nella console provider.
 
-La discovery Meta usa Pages e Instagram professionali collegati via Facebook Login. WhatsApp individua WABA **owned** dei Business autorizzati e i relativi phone_number_id; non automatizza Embedded Signup, verifica del numero o creazione del Business. Risorse partner/shared possono richiedere configurazione manuale. Per Instagram Login diretto resta l’adapter manuale con `options.login` appropriato.
+La discovery Meta usa Pages e Instagram professionali collegati via Facebook Login. Il nuovo Instagram Login è un’alternativa: viene usato se la sua app è configurata, altrimenti rimane il percorso Meta esistente. Quando entrambe le app sono configurate, Canali offre entrambi i pulsanti; la API di start accetta anche un `provider` esplicito, verificato contro il canale richiesto. Gli account già autorizzati mantengono il proprio provider. WhatsApp individua WABA **owned** dei Business autorizzati e i relativi phone_number_id; non automatizza Embedded Signup, verifica del numero o creazione del Business. Risorse partner/shared possono richiedere configurazione manuale.
+
+Su desktop il popup viene aperto durante il click, prima della richiesta di start; chiusura, annullamento e timeout terminano l’operazione e rimuovono i listener. Su mobile o con popup bloccati viene usato il redirect. Il risultato è accettato soltanto dalla finestra aperta e dalla stessa origin.
 
 YouTube legge i canali dell’utente autenticato, LinkedIn Page legge le organizzazioni restituite dagli ACL amministrativi. Reddit mostra i subreddit restituiti dall’API, non garantisce che le loro regole ammettano il post. Discord filtra guild amministrabili e canali testo/annunci; il provider verifica comunque i permessi di invio effettivi. Mastodon usa endpoint dell’istanza configurata e non effettua registrazioni dinamiche automatiche dell’app.
 
@@ -67,13 +72,15 @@ YouTube legge i canali dell’utente autenticato, LinkedIn Page legge le organiz
 
 Token access/refresh sono cifrati in SQLite con AAD di workspace, brand e account. Non sono restituiti alla UI né salvati nel browser. Il worker controlla periodicamente i token vicini alla scadenza e li rinnova prima dell’uso quando esiste un refresh token valido. Destinazioni del medesimo grant condividono un lock di rinnovo: un token ruotato viene aggiornato su tutte senza alterare le revisioni editoriali.
 
-Threads usa il rinnovo long-lived finché valido. Meta scambia token iniziali in long-lived ma non dispone qui di un rinnovo universale senza nuovo consenso. LinkedIn può non restituire refresh token per il prodotto autorizzato; altri provider possono scadere o revocare il refresh. In questi casi lo stato richiede riconnessione. Un errore di refresh blocca l’invio anziché spacciarlo per completato.
+Threads e Instagram Login usano il rinnovo long-lived finché valido. Meta scambia token iniziali in long-lived ma non dispone qui di un rinnovo universale senza nuovo consenso. LinkedIn può non restituire refresh token per il prodotto autorizzato; altri provider possono scadere o revocare il refresh. In questi casi lo stato richiede riconnessione. Un errore di refresh blocca l’invio anziché spacciarlo per completato.
 
 Le credenziali manuali senza provider/refresh non vengono “convertite” in OAuth: la rotazione compete al gestore. La disconnessione elimina le credenziali locali e disabilita il canale. **Non dichiara una revoca globale presso il provider**: revoca il grant anche nella sua console se necessario.
 
 ## Webhook
 
 Meta con app condivisa: `/webhooks/meta-global`, URL e verify token accessibili al site admin. Con app propria: `/webhooks/meta/WORKSPACE_ID`. Le firme sono controllate prima del routing, che usa origine dell’app, workspace e ID esatto di target. Il cliente di una app condivisa non riceve il suo verify token.
+
+Instagram Login usa rispettivamente `/webhooks/instagram-global` e `/webhooks/instagram/WORKSPACE_ID`. Le API di configurazione sono `/api/admin/oauth/instagram/webhook` e `/api/oauth/instagram/webhook`, con gli stessi controlli di ruolo e identità recente delle equivalenti Meta. Le callback accettano soltanto eventi firmati dall’app corretta e diretti al target autorizzato.
 
 L’operatore deve registrare callback/token, campi e sottoscrizioni nelle console Meta: la UI non finge di avere installato automaticamente tutte le sottoscrizioni provider. Un token manuale mantiene `/webhooks/ACCOUNT_ID` e appSecret/verifyToken configurabili.
 

@@ -10,7 +10,8 @@ export const ENV_FIELDS = {
     SUPPORT_EMAIL: { group: 'instance', help: 'Contatto reale del gestore' },
     PRIVACY_URL: { group: 'instance', help: 'Informativa privacy pubblicata dal gestore (HTTPS)' },
     TERMS_URL: { group: 'instance', help: 'Termini di servizio del gestore (HTTPS)' },
-    ALLOW_REGISTRATION: { group: 'instance', help: 'true: iscrizione con email verificata o Google. false: solo inviti.' },
+    ALLOW_REGISTRATION: { group: 'instance', help: 'true: consente la registrazione pubblica. false: solo inviti.' },
+    REQUIRE_EMAIL_VERIFICATION: { group: 'instance', help: 'true (predefinito): verifica email via Resend. false: accesso senza verifica; l’email resta non verificata e non può conferire privilegi globali.' },
     LLM_PROVIDER: { group: 'models', help: 'gemini oppure compatible' },
     LLM_BASE_URL: { group: 'models', help: 'Endpoint del modello' },
     LLM_MODEL: { group: 'models', help: 'Identificativo esatto del modello disponibile sul tuo endpoint' },
@@ -45,10 +46,10 @@ export class Settings {
         for (const k of Object.keys(ENV_FIELDS))
             if (process.env[k] !== undefined)
                 v[k] = process.env[k];
-        return { SITE_NAME: 'AIR3 Social Studio', ALLOW_REGISTRATION: 'false', BASE_URL: this.cfg.baseUrl, SUPPORT_EMAIL: process.env.SUPPORT_EMAIL || 'support@localhost.test', PRIVACY_URL: `${this.cfg.baseUrl}/privacy`, TERMS_URL: `${this.cfg.baseUrl}/terms`, ...v, ...this.persisted() };
+        return { SITE_NAME: 'AIR3 Social Studio', ALLOW_REGISTRATION: 'false', REQUIRE_EMAIL_VERIFICATION: 'true', BASE_URL: this.cfg.baseUrl, SUPPORT_EMAIL: process.env.SUPPORT_EMAIL || 'support@localhost.test', PRIVACY_URL: `${this.cfg.baseUrl}/privacy`, TERMS_URL: `${this.cfg.baseUrl}/terms`, ...v, ...this.persisted() };
     }
     value(k) { return String(this.values()[k] ?? ''); }
-    public() { return { name: this.value('SITE_NAME'), version: '0.2.0', google: !!(this.value('GOOGLE_CLIENT_ID') && this.value('GOOGLE_CLIENT_SECRET')), registration: this.value('ALLOW_REGISTRATION') === 'true', emailEnabled: this.mailEnabled, supportEmail: this.value('SUPPORT_EMAIL'), privacyUrl: this.value('PRIVACY_URL'), termsUrl: this.value('TERMS_URL') }; }
+    public() { return { name: this.value('SITE_NAME'), version: '0.2.0', google: !!(this.value('GOOGLE_CLIENT_ID') && this.value('GOOGLE_CLIENT_SECRET')), registration: this.value('ALLOW_REGISTRATION') === 'true', emailVerificationRequired: this.value('REQUIRE_EMAIL_VERIFICATION') !== 'false', emailEnabled: this.mailEnabled, supportEmail: this.value('SUPPORT_EMAIL'), privacyUrl: this.value('PRIVACY_URL'), termsUrl: this.value('TERMS_URL') }; }
     get mailEnabled() { return !!(this.value('RESEND_API_KEY') && this.value('MAIL_FROM')); }
     read(p) { this.auth.requireSiteAdmin(p); const v = this.values(); return { fields: Object.entries(ENV_FIELDS).map(([key, spec]) => ({ key, ...spec, value: spec.secret ? '' : v[key] ?? '', configured: !!v[key] })), effectiveBaseUrl: this.cfg.baseUrl, pendingRestart: !!v.BASE_URL && v.BASE_URL !== this.cfg.baseUrl, generatedFile: 'DATA_DIR/runtime.generated.env', preview: this.env(false) }; }
     validate(input) {
@@ -60,7 +61,7 @@ export class Settings {
             // Empty secret means retain; clearing it is an explicit null action through clear[].
             if (ENV_FIELDS[key].secret && !value)
                 continue;
-            if (key === 'ALLOW_REGISTRATION')
+            if (key === 'ALLOW_REGISTRATION' || key === 'REQUIRE_EMAIL_VERIFICATION')
                 assert(['true', 'false'].includes(value), 'ENV_VALUE', 'Usare true o false');
             if (key === 'LLM_PROVIDER')
                 assert(['gemini', 'compatible'].includes(value), 'ENV_VALUE', 'Provider non valido');
@@ -96,8 +97,8 @@ export class Settings {
             v[k] = '';
         }
         const effective = { ...this.values(), ...v };
-        if (effective.ALLOW_REGISTRATION === 'true')
-            assert(effective.RESEND_API_KEY && effective.MAIL_FROM, 'MAIL_REQUIRED', 'Configurare prima l’email transazionale per la registrazione standard');
+        if (effective.ALLOW_REGISTRATION === 'true' && effective.REQUIRE_EMAIL_VERIFICATION === 'true')
+            assert(effective.RESEND_API_KEY && effective.MAIL_FROM, 'MAIL_REQUIRED', 'Configurare prima l’email transazionale per abilitare la verifica email');
         const value = encrypt(v, this.cfg.masterKey, 'installation:environment');
         this.store.db.prepare("INSERT INTO installation VALUES ('environment',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(value);
         this.apply(false);

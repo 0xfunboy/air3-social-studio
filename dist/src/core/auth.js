@@ -73,15 +73,18 @@ export class Auth {
         }
         const users = store.db.prepare("SELECT id, email FROM users").all();
         for (const u of users) {
-            if (isSuperadminEmail(u.email)) {
+            const flags = store.db.prepare('SELECT verified,disabled FROM user_flags WHERE user_id=?').get(u.id);
+            if (isSuperadminEmail(u.email) && flags?.verified !== 0 && !flags?.disabled) {
                 this.ensureSuperadmin(u.id);
             }
         }
     }
     ensureSuperadmin(userId) {
         const db = this.store.db;
+        const user = db.prepare('SELECT email FROM users WHERE id=?').get(userId);
+        const flags = db.prepare('SELECT verified,disabled FROM user_flags WHERE user_id=?').get(userId);
+        assert(user && isSuperadminEmail(user.email) && flags?.verified !== 0 && !flags?.disabled, 'SITE_ADMIN', 'L’amministratore deve essere verificato e abilitato', 403);
         db.prepare('INSERT OR IGNORE INTO site_admins VALUES (?)').run(userId);
-        db.prepare('INSERT INTO user_flags VALUES (?,1,0) ON CONFLICT(user_id) DO UPDATE SET verified=1, disabled=0').run(userId);
         const workspaces = db.prepare('SELECT id FROM workspaces').all();
         for (const w of workspaces) {
             db.prepare("INSERT INTO memberships VALUES (?,?,?) ON CONFLICT(user_id,workspace_id) DO UPDATE SET role='admin'").run(userId, w.id, 'admin');
@@ -97,36 +100,21 @@ export class Auth {
         rate.count++;
         this.attempts.set(ip, rate);
         assert(rate.count <= 10, 'RATE_LIMIT', 'Attendere prima di riprovare', 429);
-        let u = this.store.db.prepare('SELECT * FROM users WHERE email=?').get(email.toLowerCase());
-        if (!u && isSuperadminEmail(email)) {
-            assert(password.length >= 16, 'PASSWORD', 'Almeno 16 caratteri');
-            const uid = id(), wid = this.store.db.prepare('SELECT id FROM workspaces LIMIT 1').get()?.id || id();
-            this.store.transaction(() => {
-                this.store.db.prepare('INSERT INTO users VALUES (?,?,?,?)').run(uid, email.toLowerCase(), passwordHash(password), now());
-                this.store.db.prepare('INSERT OR IGNORE INTO user_flags VALUES (?,1,0)').run(uid);
-                this.store.db.prepare('INSERT OR IGNORE INTO workspaces VALUES (?,?)').run(wid, 'Il mio studio');
-                this.store.db.prepare('INSERT OR IGNORE INTO memberships VALUES (?,?,?)').run(uid, wid, 'admin');
-                this.store.db.prepare('INSERT OR IGNORE INTO site_admins VALUES (?)').run(uid);
-            });
-            u = this.store.db.prepare('SELECT * FROM users WHERE email=?').get(email.toLowerCase());
-        }
+        const u = this.store.db.prepare('SELECT * FROM users WHERE email=?').get(email.toLowerCase());
         // Constant-work password check for unknown accounts, without leaking account existence.
         const dummy = '00000000000000000000000000000000:' + '00'.repeat(64);
         const valid = passwordValid(password, u?.password ?? dummy);
         assert(u && valid, 'LOGIN', 'Credenziali non valide', 401);
-        if (isSuperadminEmail(email)) {
-            this.ensureSuperadmin(u.id);
-        }
         this.attempts.delete(ip);
         return this.issueSession(u.id);
     }
     issueSession(userId) {
         const u = this.store.db.prepare('SELECT id,email FROM users WHERE id=?').get(userId);
-        if (u && isSuperadminEmail(u.email)) {
+        const flags = this.store.db.prepare('SELECT * FROM user_flags WHERE user_id=?').get(userId);
+        assert(u && !flags?.disabled && (flags?.verified !== 0 || this.unverifiedAccess(userId, u.email)), 'LOGIN', 'Accesso non disponibile. Verifica la tua email o contatta un amministratore.', 401);
+        if (isSuperadminEmail(u.email)) {
             this.ensureSuperadmin(u.id);
         }
-        const flags = this.store.db.prepare('SELECT * FROM user_flags WHERE user_id=?').get(userId);
-        assert(u && !flags?.disabled && flags?.verified !== 0, 'LOGIN', 'Accesso non disponibile. Verifica la tua email o contatta un amministratore.', 401);
         const token = randomBytes(32).toString('base64url'), csrf = randomBytes(32).toString('base64url');
         this.store.db.prepare('DELETE FROM sessions WHERE expires<?').run(Date.now());
         this.store.db.prepare('DELETE FROM session_recent WHERE token_hash NOT IN (SELECT token_hash FROM sessions)').run();
@@ -135,17 +123,23 @@ export class Auth {
         return { token, csrf, user: u, workspaces: this.workspaces(userId) };
     }
     siteAdmin(userId) {
-        const u = this.store.db.prepare('SELECT email FROM users WHERE id=?').get(userId);
-        if (u && isSuperadminEmail(u.email))
-            return true;
+        const flags = this.store.db.prepare('SELECT verified,disabled FROM user_flags WHERE user_id=?').get(userId);
+        if (flags?.verified === 0 || flags?.disabled)
+            return false;
         return !!this.store.db.prepare('SELECT user_id FROM site_admins WHERE user_id=?').get(userId);
+    }
+    unverifiedAccess(userId, email) {
+        return process.env.REQUIRE_EMAIL_VERIFICATION === 'false' && !isSuperadminEmail(email)
+            && !this.store.db.prepare('SELECT 1 FROM site_admins WHERE user_id=?').get(userId)
+            && !!this.store.db.prepare('SELECT 1 FROM unverified_access WHERE user_id=?').get(userId);
     }
     requireSiteAdmin(p) { requireHuman(p); assert(p.via === 'session' && this.siteAdmin(p.userId), 'SITE_ADMIN', 'Richiesto amministratore dell’installazione', 403); }
     recent(req) { const token = (req.headers.cookie ?? '').split(';').map(x => x.trim()).find(x => x.startsWith('smm_session='))?.slice(12) ?? ''; const r = this.store.db.prepare('SELECT at FROM session_recent WHERE token_hash=?').get(sha(token)); return !!r && Date.now() - r.at < 15 * 60000; }
     reauthenticate(req, p, password) { const u = this.store.db.prepare('SELECT password FROM users WHERE id=?').get(p.userId); assert(u && passwordValid(password, u.password), 'LOGIN', 'Password non valida', 401); const t = (req.headers.cookie ?? '').split(';').map(x => x.trim()).find(x => x.startsWith('smm_session='))?.slice(12) ?? ''; this.store.db.prepare('INSERT INTO session_recent VALUES (?,?) ON CONFLICT(token_hash) DO UPDATE SET at=excluded.at').run(sha(t), Date.now()); }
     workspaces(userId) {
         const u = this.store.db.prepare('SELECT email FROM users WHERE id=?').get(userId);
-        if (u && isSuperadminEmail(u.email)) {
+        const flags = this.store.db.prepare('SELECT verified,disabled FROM user_flags WHERE user_id=?').get(userId);
+        if (u && isSuperadminEmail(u.email) && flags?.verified !== 0 && !flags?.disabled) {
             this.ensureSuperadmin(userId);
         }
         return this.store.db.prepare('SELECT w.*,m.role FROM workspaces w JOIN memberships m ON m.workspace_id=w.id WHERE m.user_id=?').all(userId);
@@ -162,7 +156,8 @@ export class Auth {
         const s = this.store.db.prepare('SELECT * FROM sessions WHERE token_hash=? AND expires>?').get(sha(token), Date.now());
         assert(s, 'AUTH', 'Sessione scaduta', 401);
         const flags = this.store.db.prepare('SELECT disabled,verified FROM user_flags WHERE user_id=?').get(s.user_id);
-        assert(!flags?.disabled && flags?.verified !== 0, 'AUTH', 'Account non abilitato', 401);
+        const user = this.store.db.prepare('SELECT email FROM users WHERE id=?').get(s.user_id);
+        assert(user && !flags?.disabled && (flags?.verified !== 0 || this.unverifiedAccess(s.user_id, user.email)), 'AUTH', 'Account non abilitato', 401);
         if (mutating) {
             assert(equal(String(req.headers['x-csrf-token'] ?? ''), s.csrf), 'CSRF', 'Token CSRF non valido', 403);
             const origin = req.headers.origin;

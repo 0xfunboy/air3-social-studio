@@ -50,28 +50,29 @@ export function createApp(studio, auth, webRoot = resolve('web')) {
                 send(res, { ok: true, service: 'air3-social-studio', version: '0.2.0' });
                 return;
             }
-            if (path === '/webhooks/meta-global') {
+            const globalWebhook = /^\/webhooks\/(meta|instagram)-global$/.exec(path);
+            if (globalWebhook) {
                 if (method === 'GET') {
                     res.writeHead(200, { 'Content-Type': 'text/plain' });
-                    res.end(webhooks.metaChallenge('', u.searchParams, true));
+                    res.end(webhooks.metaChallenge('', u.searchParams, true, globalWebhook[1]));
                     return;
                 }
                 if (method === 'POST') {
-                    await webhooks.metaReceive('', req.headers, await readBody(req, 1000000), true);
+                    await webhooks.metaReceive('', req.headers, await readBody(req, 1000000), true, globalWebhook[1]);
                     send(res, { ok: true });
                     return;
                 }
                 throw new AppError(405, 'METHOD', 'Metodo non consentito');
             }
-            const metaWebhook = /^\/webhooks\/meta\/([a-f0-9]{32})$/.exec(path);
+            const metaWebhook = /^\/webhooks\/(meta|instagram)\/([a-f0-9]{32})$/.exec(path);
             if (metaWebhook) {
                 if (method === 'GET') {
                     res.writeHead(200, { 'Content-Type': 'text/plain' });
-                    res.end(webhooks.metaChallenge(metaWebhook[1], u.searchParams));
+                    res.end(webhooks.metaChallenge(metaWebhook[2], u.searchParams, false, metaWebhook[1]));
                     return;
                 }
                 if (method === 'POST') {
-                    await webhooks.metaReceive(metaWebhook[1], req.headers, await readBody(req, 1000000));
+                    await webhooks.metaReceive(metaWebhook[2], req.headers, await readBody(req, 1000000), false, metaWebhook[1]);
                     send(res, { ok: true });
                     return;
                 }

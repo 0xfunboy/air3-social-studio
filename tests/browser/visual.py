@@ -69,7 +69,7 @@ with sync_playwright() as p:
  assert page.evaluate("UI_CALLS.some(c=>c.path==='/api/admin/installation'&&c.method==='PUT'&&c.body.values.GOOGLE_CLIENT_ID==='ui-test-client-id')")
  assert page.locator('#f-GOOGLE_CLIENT_SECRET').input_value()==''
  page.locator('[data-action=env-group][data-id=oauth]').click();page.wait_for_timeout(200)
- assert page.locator('[data-action=configure-shared-oauth]').count()==12
+ assert page.locator('[data-action=configure-shared-oauth]').count()==len(fixture['oauth'])
  page.screenshot(path=str(out/'admin-shared-oauth-dark.png'),full_page=True)
  page.locator('[data-action=configure-shared-oauth][data-id=x]').click()
  page.locator('#f-clientId').fill('ui-social-app');page.locator('#f-clientSecret').fill('ui-social-secret')

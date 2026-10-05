@@ -69,7 +69,7 @@ In Modelli imposta provider, endpoint, nome modello e chiave. La selezione di un
 
 Per Google login configura una app Web nella console Google, callback esatta `/oauth/google/callback` e schermata di consenso. Per i canali configura app condivise in **Amministrazione → App social condivise**, oppure un override nel workspace. Poi usa **Canali → Collega**, presta il consenso e scegli le destinazioni. Guida completa in OAUTH.md.
 
-Lascia inizialmente `ALLOW_REGISTRATION=false`: accesso per utenti già esistenti e invitati. La registrazione pubblica con password richiede un mittente Resend configurato e verificato. Gli inviti possono essere condivisi manualmente dall’amministratore se l’email non è configurata. Non usare un account gestore come normale utente cliente.
+Lascia inizialmente `ALLOW_REGISTRATION=false`: accesso per utenti già esistenti e invitati. La registrazione pubblica con password richiede un mittente Resend configurato e verificato per default (`REQUIRE_EMAIL_VERIFICATION=true`, anche quando la variabile è assente nelle installazioni precedenti). Il gestore può scegliere esplicitamente `false`: gli account possono accedere, ma l’email resta non verificata e non conferisce privilegi globali. Riabilitare la verifica blocca tali account fino alla conferma email. Gli inviti possono essere condivisi manualmente dall’amministratore se l’email non è configurata. Gli indirizzi superadmin non possono essere provisionati dalla registrazione pubblica o da un login con password arbitraria: usare bootstrap, invito o Google con email verificata.
 
 ## Env e riavvii
 

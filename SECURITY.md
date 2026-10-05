@@ -38,6 +38,8 @@ Segnalare problemi al proprietario del repository senza includere token, screens
 
 ## Identità e configurazione 0.2.0
 
+La verifica email della registrazione pubblica resta obbligatoria per default. Un opt-out esplicito permette l’accesso dei soli account registrati in tale modalità, senza marcare l’email come verificata. La promozione a superadmin richiede un account già verificato e abilitato: il login con password non crea utenti, gli indirizzi amministrativi sono riservati e nessuna promozione riabilita account disabilitati. Il bootstrap iniziale resta una procedura locale; Google deve dimostrare il possesso dell’email tramite OIDC.
+
 Site admin distinto da ruolo amministratore tenant. Inviti/password reset/email verification hanno token casuali monouso hashati, scadenze e invalidazione sessione. Google usa verifica crittografica RS256 e controlli issuer/audience/nonce/email; un’email coincidente non crea un collegamento implicito. Le operazioni sensibili richiedono recent-auth; un utente Google-only deve impostare una password attraverso il recovery verificato prima di confermarle.
 
 I segreti delle app globali sono cifrati con AAD installazione; un override workspace non li eredita come proprio materiale. I token account restano tenant/brand/account-scoped. La scelta di una destinazione richiede un grant non scaduto, intestato all’utente e al workspace, e configurazione dell’app non modificata. Meta shared webhook e Telegram verificano firma/binding e target esatto prima di creare inbox.

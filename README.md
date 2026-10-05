@@ -109,9 +109,9 @@ AIR3 Social Studio v2.0 includes automated administrative role provisioning:
 - **Configurable Administrator Identity:** Set `SUPERADMIN_EMAIL=admin@yourdomain.com` in `.env` (or via bootstrap credentials).
 - **Privilege Level:** Global Installation Superadmin (`site_admins` authority) + Full Workspace Admin across all active and future workspaces.
 - **Auto-Promotion Mechanics:**
-  - **Local Authentication:** Logging in or registering with the configured admin email automatically provisions the user with `verified=1`, `disabled=0`, inserts into `site_admins`, and grants `admin` membership on every workspace.
+  - **Local Authentication:** Password login only authenticates existing accounts. Configured admin addresses must be provisioned through local bootstrap, an invitation, or verified Google sign-in. Only verified, enabled accounts are promoted; promotion never bypasses verification or re-enables disabled accounts.
   - **Google OIDC Federation:** When signing in via Google Identity, accounts matching the configured admin email are instantly linked, verified, and elevated to Superadmin without requiring manual database intervention.
-  - **Session & Privilege Assertion:** On every session issuance and permission check, `siteAdmin()` unconditionally evaluates to `true`, providing unrestricted access to system telemetry, global OAuth credentials, audit logs, and multi-tenant workspaces.
+  - **Session & Privilege Assertion:** Session issuance checks account eligibility before promotion. `siteAdmin()` checks the stored global role and rejects unverified or disabled accounts.
 
 ---
 

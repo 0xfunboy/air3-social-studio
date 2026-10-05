@@ -1,5 +1,5 @@
 import { assert, now, safeError } from '../core/util.js';
-import { decrypt, equal, hmac } from '../core/crypto.js';
+import { equal, hmac } from '../core/crypto.js';
 /** Receives provider-authenticated events only. Public request bodies never set lastInboundAt. */
 export class Webhooks {
     studio;
@@ -43,16 +43,13 @@ export class Webhooks {
             }
         }
     }
-    metaSettings(wid, global = false) {
-        const r = (global ? this.studio.store.db.prepare('SELECT value FROM installation WHERE key=?').get('oauth:meta') : this.studio.store.db.prepare('SELECT value FROM workspace_settings WHERE workspace_id=? AND key=?').get(wid, 'oauth:meta'));
-        assert(r, 'NOT_FOUND', 'Webhook non trovato', 404);
-        const a = decrypt(r.value, this.studio.cfg.masterKey, global ? 'installation:oauth:meta' : `oauth-app:${wid}:meta`);
-        assert(a.enabled !== false && a.clientSecret, 'WEBHOOK', 'App disabilitata', 403);
-        return a;
+    metaSettings(wid, global = false, provider = 'meta') {
+        assert(this.studio.extensions, 'NOT_FOUND', 'Webhook non trovato', 404);
+        return this.studio.extensions.oauth.webhookApp(wid, provider, global);
     }
-    metaChallenge(wid, q, global = false) { const a = this.metaSettings(wid, global); assert(a.webhookVerifyToken && q.get('hub.mode') === 'subscribe' && equal(q.get('hub.verify_token') ?? '', a.webhookVerifyToken), 'WEBHOOK_VERIFY', 'Token non valido', 403); return q.get('hub.challenge') ?? ''; }
-    async metaReceive(wid, headers, raw, global = false) {
-        const app = this.metaSettings(wid, global);
+    metaChallenge(wid, q, global = false, provider = 'meta') { const a = this.metaSettings(wid, global, provider); assert(a.webhookVerifyToken && q.get('hub.mode') === 'subscribe' && equal(q.get('hub.verify_token') ?? '', a.webhookVerifyToken), 'WEBHOOK_VERIFY', 'Token non valido', 403); return q.get('hub.challenge') ?? ''; }
+    async metaReceive(wid, headers, raw, global = false, provider = 'meta') {
+        const app = this.metaSettings(wid, global, provider);
         assert(equal(String(headers['x-hub-signature-256'] ?? ''), 'sha256=' + hmac(raw, app.clientSecret)), 'WEBHOOK_SIGNATURE', 'Firma non valida', 403);
         const workspaces = global ? this.studio.store.db.prepare('SELECT id FROM workspaces').all() : [{ id: wid }];
         for (const w of workspaces) {
@@ -61,7 +58,7 @@ export class Webhooks {
                 if (!e.data.enabled || e.data.transport !== 'direct' || !['whatsapp', 'messenger', 'instagram-dm', 'instagram'].includes(e.data.platform))
                     continue;
                 const c = this.studio.hub.credentials(e);
-                if (c.oauthProvider !== 'meta' || c.oauthClientId !== app.clientId || (c.oauthAppScope ?? 'workspace') !== (global ? 'installation' : 'workspace'))
+                if (c.oauthProvider !== provider || c.oauthClientId !== app.clientId || (c.oauthAppScope ?? 'workspace') !== (global ? 'installation' : 'workspace'))
                     continue;
                 if (c.appSecret !== app.clientSecret)
                     continue;
